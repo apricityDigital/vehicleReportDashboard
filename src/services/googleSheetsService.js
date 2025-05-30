@@ -72,14 +72,13 @@ const transformWideToLong = (data) => {
     Object.keys(row).forEach(key => {
       if (key !== 'Date' && key.startsWith('Zone ')) {
         const zone = key.replace('Zone ', '');
-        const value = row[key];
-        if (value && value !== '0') {
-          longData.push({
-            Date: date,
-            Zone: zone,
-            Count: value
-          });
-        }
+        const value = parseInt(row[key]) || 0;
+        // Include all values, including 0, for complete data representation
+        longData.push({
+          Date: date,
+          Zone: zone,
+          Count: value
+        });
       }
     });
   });
@@ -434,7 +433,7 @@ export const fetchSheetData = async (sheetName) => {
         } else {
           parsedData = detailedData;
         }
-      } else if ((sheetName === 'onBoardAfter3PM') && hasIssueColumns) {
+      } else if (hasIssueColumns && ['issuesPost0710', 'fuelStation', 'post06AMOpenIssues'].includes(sheetName)) {
         // Special handling for issue data to preserve breakdown information
         parsedData = transformIssueData(parsedData);
       } else if (hasZoneField && hasMultipleCountColumns) {
@@ -447,6 +446,7 @@ export const fetchSheetData = async (sheetName) => {
           Date: normalizeDate(row.Date),
           Count: row['On Route Vehicle Count'] || row['Count'] || 0
         })).filter(row => row.Date && row.Zone); // Filter out empty rows
+
       } else {
         // Default transformation for other sheets
         parsedData = parsedData.map(row => ({
@@ -457,12 +457,13 @@ export const fetchSheetData = async (sheetName) => {
       }
     }
 
-    // Debug logging for troubleshooting data issues
-    if (['issuesPost0710', 'fuelStation', 'post06AMOpenIssues'].includes(sheetName)) {
-      console.log(`${sheetName} - Raw data sample:`, parsedData.slice(0, 3));
-      console.log(`${sheetName} - Total rows:`, parsedData.length);
-      console.log(`${sheetName} - Headers:`, parsedData.length > 0 ? Object.keys(parsedData[0]) : 'No data');
-    }
+    // Debug logging for all sheets to troubleshoot data issues
+    console.log(`\n=== ${sheetName.toUpperCase()} DATA ===`);
+    console.log(`${sheetName} - Total rows:`, parsedData.length);
+    console.log(`${sheetName} - Headers:`, parsedData.length > 0 ? Object.keys(parsedData[0]) : 'No data');
+    console.log(`${sheetName} - Sample data (first 5 rows):`, parsedData.slice(0, 5));
+    console.log(`${sheetName} - All data:`, parsedData);
+    console.log(`=== END ${sheetName.toUpperCase()} DATA ===\n`);
 
     return parsedData;
   } catch (error) {

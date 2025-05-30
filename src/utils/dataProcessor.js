@@ -144,7 +144,7 @@ export const processDataForChart = (data, valueField, labelField = 'Zone', sheet
 
   const isPercentageChart = sheetName === 'glitchPercentage';
   const isLessThan3TripsChart = sheetName === 'lessThan3Trips';
-  const isIssueChart = ['issuesPost0710', 'vehicleBreakdown', 'fuelStation', 'post06AMOpenIssues', 'onBoardAfter3PM'].includes(sheetName);
+  const isIssueChart = ['issuesPost0710', 'vehicleBreakdown', 'fuelStation', 'post06AMOpenIssues'].includes(sheetName);
 
   if (isLessThan3TripsChart && tripCountFilter && tripCountFilter !== 'all') {
     // Special handling for lessThan3Trips with specific trip count filter
@@ -388,6 +388,14 @@ export const processDataForChart = (data, valueField, labelField = 'Zone', sheet
   const groupedData = {};
   const groupedRemarks = {};
 
+  // Debug logging for onBoardAfter3PM
+  if (sheetName === 'onBoardAfter3PM') {
+    console.log('\n=== PROCESSING onBoardAfter3PM DATA ===');
+    console.log('Input data:', data);
+    console.log('Value field:', valueField);
+    console.log('Label field:', labelField);
+  }
+
   data.forEach((row) => {
     const label = row[labelField] || 'Unknown';
 
@@ -401,6 +409,11 @@ export const processDataForChart = (data, valueField, labelField = 'Zone', sheet
     const value = parseInt(rawValue) || 0;
     const remarks = row.Remarks || '';
 
+    // Debug logging for onBoardAfter3PM
+    if (sheetName === 'onBoardAfter3PM') {
+      console.log(`Processing row - Zone: ${label}, Raw Value: ${rawValue}, Parsed Value: ${value}`);
+    }
+
     if (groupedData[label]) {
       groupedData[label] += value;
       // Combine remarks
@@ -412,6 +425,12 @@ export const processDataForChart = (data, valueField, labelField = 'Zone', sheet
       groupedRemarks[label] = remarks;
     }
   });
+
+  // Debug logging for onBoardAfter3PM
+  if (sheetName === 'onBoardAfter3PM') {
+    console.log('Grouped data:', groupedData);
+    console.log('=== END PROCESSING onBoardAfter3PM DATA ===\n');
+  }
 
   const labels = Object.keys(groupedData).sort((a, b) => {
     // Sort numerically if possible, otherwise alphabetically
@@ -441,44 +460,18 @@ export const processDataForChart = (data, valueField, labelField = 'Zone', sheet
 
 // Get metric-specific axis labels
 const getAxisLabels = (sheetName) => {
-  const axisConfig = {
-    onRouteVehicles: {
-      xLabel: 'Vehicle Zones',
-      yLabel: 'Number of Vehicles On Route'
-    },
-    onBoardAfter3PM: {
-      xLabel: 'Vehicle Zones',
-      yLabel: 'Vehicles Still On Board'
-    },
-    lessThan3Trips: {
-      xLabel: 'Vehicle Zones',
-      yLabel: 'Vehicles with <3 Trips'
-    },
-    glitchPercentage: {
-      xLabel: 'Vehicle Zones',
-      yLabel: 'Glitch Percentage (%)'
-    },
-    issuesPost0710: {
-      xLabel: 'Vehicle Zones',
-      yLabel: 'Late Arrival Count'
-    },
-    fuelStation: {
-      xLabel: 'Vehicle Zones',
-      yLabel: 'Fuel Station Visits'
-    },
-    post06AMOpenIssues: {
-      xLabel: 'Vehicle Zones',
-      yLabel: 'Late Departure Count'
-    },
-    vehicleBreakdown: {
-      xLabel: 'Vehicle Zones',
-      yLabel: 'Breakdown Count'
-    }
-  };
+  // Special case for route percent coverage chart which shows percentages
+  if (sheetName === 'glitchPercentage') {
+    return {
+      xLabel: 'Zones',
+      yLabel: 'Route Coverage (%)'
+    };
+  }
 
-  return axisConfig[sheetName] || {
-    xLabel: 'Vehicle Zones',
-    yLabel: 'Vehicle Count'
+  // All other charts use standard vehicle count labels
+  return {
+    xLabel: 'Zones',
+    yLabel: 'Number of Vehicles'
   };
 };
 
@@ -486,7 +479,7 @@ const getAxisLabels = (sheetName) => {
 export const getChartConfig = (title, sheetName) => {
   const axisLabels = getAxisLabels(sheetName);
   const isPercentageChart = sheetName === 'glitchPercentage';
-  const isIssueChart = ['issuesPost0710', 'vehicleBreakdown', 'fuelStation', 'post06AMOpenIssues', 'onBoardAfter3PM'].includes(sheetName);
+  const isIssueChart = ['issuesPost0710', 'vehicleBreakdown', 'fuelStation', 'post06AMOpenIssues'].includes(sheetName);
 
   return {
     responsive: true,
@@ -670,8 +663,8 @@ export const CHART_TITLES = {
   onRouteVehicles: 'On Route Vehicles',
   onBoardAfter3PM: 'Vehicles on Board after 3PM',
   lessThan3Trips: 'Vehicles with Less than 3 Trips',
-  glitchPercentage: 'Glitch Percentage Report',
-  issuesPost0710: 'Vehicles Arriving After 07:10',
+  glitchPercentage: 'Route Percent Coverage',
+  issuesPost0710: 'Vehicle Starting after 7:10AM',
   fuelStation: 'Vehicles Going to Fuel Station',
   post06AMOpenIssues: 'Vehicles Leaving Zone After 6PM',
   vehicleBreakdown: 'Vehicle Breakdown Information'

@@ -21,7 +21,7 @@ ChartJS.register(
 
 const BarChart = ({ data, options, title, loading = false, error = null, sheetName = '' }) => {
   const [selectedIssueBreakdown, setSelectedIssueBreakdown] = useState(null);
-  const isIssueChart = ['issuesPost0710', 'vehicleBreakdown', 'fuelStation', 'post06AMOpenIssues', 'onBoardAfter3PM'].includes(sheetName);
+  const isIssueChart = ['issuesPost0710', 'vehicleBreakdown', 'fuelStation', 'post06AMOpenIssues'].includes(sheetName);
 
   const handleChartClick = (event, elements) => {
     if (isIssueChart && elements.length > 0) {

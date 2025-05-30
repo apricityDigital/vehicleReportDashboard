@@ -5,7 +5,6 @@ const Filters = ({
   setSelectedDate,
   selectedZone,
   setSelectedZone,
-  availableDates,
   availableZones,
   tripCountFilter,
   setTripCountFilter,
@@ -17,26 +16,25 @@ const Filters = ({
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <div className="flex flex-col sm:flex-row gap-4 flex-1">
           <div className="flex flex-col">
-            <label htmlFor="date-select" className="text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="date-picker" className="text-sm font-medium text-gray-700 mb-1">
               Select Date
             </label>
-            <select
-              id="date-select"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="border border-gray-300 rounded-md px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-            >
-              <option value="">All Dates</option>
-              {availableDates.map(date => (
-                <option key={date} value={date}>
-                  {new Date(date).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric'
-                  })}
-                </option>
-              ))}
-            </select>
+            <div className="flex gap-2">
+              <input
+                id="date-picker"
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="border border-gray-300 rounded-md px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              />
+              <button
+                onClick={() => setSelectedDate('')}
+                className="px-3 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                title="Clear date filter"
+              >
+                All
+              </button>
+            </div>
           </div>
 
           <div className="flex flex-col">
