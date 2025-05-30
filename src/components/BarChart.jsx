@@ -19,23 +19,40 @@ ChartJS.register(
   Legend
 );
 
-const BarChart = ({ data, options, title, loading = false, error = null, sheetName = '' }) => {
-  const [selectedIssueBreakdown, setSelectedIssueBreakdown] = useState(null);
+const BarChart = ({ data, options, title, loading = false, error = null, sheetName = '', rawData = [] }) => {
+  const [selectedDetails, setSelectedDetails] = useState(null);
   const isIssueChart = ['issuesPost0710', 'vehicleBreakdown', 'fuelStation', 'post06AMOpenIssues'].includes(sheetName);
 
   const handleChartClick = (event, elements) => {
-    if (isIssueChart && elements.length > 0) {
+    if (elements.length > 0) {
       const elementIndex = elements[0].index;
       const datasetIndex = elements[0].datasetIndex;
       const dataset = data.datasets[datasetIndex];
       const label = data.labels[elementIndex];
+      const value = dataset.data[elementIndex];
 
-      if (dataset.issueBreakdowns && dataset.issueBreakdowns[label]) {
-        setSelectedIssueBreakdown({
+      // For issue charts, use existing breakdown logic
+      if (isIssueChart && dataset.issueBreakdowns && dataset.issueBreakdowns[label]) {
+        setSelectedDetails({
+          type: 'issue',
           zone: label,
+          title: title,
+          sheetName: sheetName,
           breakdown: dataset.issueBreakdowns[label],
-          total: dataset.data[elementIndex],
+          total: value,
           details: dataset.vehicleDetails ? dataset.vehicleDetails[label] : null
+        });
+      } else {
+        // For all other charts, show detailed data from the raw sheet data
+        const zoneData = rawData.filter(row => String(row.Zone) === String(label));
+        setSelectedDetails({
+          type: 'general',
+          zone: label,
+          title: title,
+          sheetName: sheetName,
+          total: value,
+          rawData: zoneData,
+          details: null
         });
       }
     }
@@ -98,27 +115,36 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
   return (
     <>
       <div className="card">
-        {isIssueChart && (
-          <div className="mb-2 text-sm text-gray-600 text-center">
-            💡 Click on a bar to see detailed issue breakdown
-          </div>
-        )}
+        <div className="mb-2 text-sm text-gray-600 text-center flex items-center justify-center">
+          <svg className="w-4 h-4 mr-1 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.121 2.122" />
+          </svg>
+          Click on any bar to see detailed information
+        </div>
         <div className="h-80">
           <Bar data={data} options={enhancedOptions} />
         </div>
       </div>
 
-      {/* Issue Breakdown Modal */}
-      {selectedIssueBreakdown && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">
-                Zone {selectedIssueBreakdown.zone} - Issue Breakdown
-              </h3>
+      {/* Enhanced Detail Modal */}
+      {selectedDetails && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            <div className="flex justify-between items-center p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900 flex items-center">
+                  <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-lg mr-3 flex items-center justify-center">
+                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                  </div>
+                  Zone {selectedDetails.zone} - {selectedDetails.title}
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">Detailed breakdown and information</p>
+              </div>
               <button
-                onClick={() => setSelectedIssueBreakdown(null)}
-                className="text-gray-400 hover:text-gray-600"
+                onClick={() => setSelectedDetails(null)}
+                className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-2 rounded-lg transition-colors"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -126,60 +152,104 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
               </button>
             </div>
 
-            <div className="space-y-3">
-              <div className="text-sm text-gray-600 mb-3">
-                Total Issues: <span className="font-semibold">{selectedIssueBreakdown.total}</span>
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+              {/* Summary Section */}
+              <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-lg font-semibold text-blue-800">Summary</h4>
+                    <p className="text-sm text-blue-600">Zone {selectedDetails.zone} overview</p>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-3xl font-bold text-blue-600">{selectedDetails.total}</div>
+                    <div className="text-sm text-blue-500">
+                      {selectedDetails.type === 'issue' ? 'Total Issues' : 'Total Count'}
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              {Object.entries(selectedIssueBreakdown.breakdown).map(([issueType, count]) => (
-                count > 0 && (
-                  <div key={issueType} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                    <span className="font-medium text-gray-700">{issueType}</span>
-                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm font-semibold">
-                      {count}
-                    </span>
+              {/* Issue Breakdown (for issue charts) */}
+              {selectedDetails.type === 'issue' && selectedDetails.breakdown && (
+                <div className="mb-6">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                    Issue Breakdown
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {Object.entries(selectedDetails.breakdown).map(([issueType, count]) => (
+                      count > 0 && (
+                        <div key={issueType} className="flex justify-between items-center p-4 bg-red-50 rounded-lg border border-red-200">
+                          <span className="font-medium text-gray-700">{issueType}</span>
+                          <span className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-semibold">
+                            {count}
+                          </span>
+                        </div>
+                      )
+                    ))}
                   </div>
-                )
-              ))}
+                </div>
+              )}
 
-              {/* Show detailed vehicle information for breakdown data */}
-              {selectedIssueBreakdown.details && selectedIssueBreakdown.details.length > 0 && (
-                <div className="mt-4">
-                  <h4 className="font-semibold text-gray-800 mb-2">Vehicle Details:</h4>
-                  <div className="max-h-60 overflow-y-auto space-y-2">
-                    {selectedIssueBreakdown.details.map((detail, index) => (
-                      <div key={index} className="p-3 bg-gray-100 rounded-lg text-sm">
-                        <div className="grid grid-cols-2 gap-2">
-                          {detail.vehicleNo && (
-                            <div><strong>Vehicle:</strong> {detail.vehicleNo}</div>
-                          )}
-                          <div><strong>Issue/Type:</strong> {detail.issue}</div>
+              {/* Raw Data Table (for general charts) */}
+              {selectedDetails.type === 'general' && selectedDetails.rawData && selectedDetails.rawData.length > 0 && (
+                <div className="mb-6">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Detailed Records ({selectedDetails.rawData.length} entries)
+                  </h4>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full bg-white border border-gray-200 rounded-lg">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          {Object.keys(selectedDetails.rawData[0]).map((key) => (
+                            <th key={key} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">
+                              {key}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {selectedDetails.rawData.map((row, index) => (
+                          <tr key={index} className="hover:bg-gray-50">
+                            {Object.entries(row).map(([key, value]) => (
+                              <td key={key} className="px-4 py-3 text-sm text-gray-900 border-b">
+                                {value || '-'}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
 
-                          {/* Handle different time fields */}
-                          {detail.breakdownTime && (
-                            <div><strong>Breakdown Time:</strong> {detail.breakdownTime}</div>
-                          )}
-                          {detail.time && !detail.breakdownTime && (
-                            <div><strong>Time:</strong> {detail.time}</div>
-                          )}
-
-                          {/* Handle different status fields */}
-                          {detail.spareStatus && (
-                            <div><strong>Status:</strong> {detail.spareStatus}</div>
-                          )}
-                          {detail.status && !detail.spareStatus && (
-                            <div><strong>Status:</strong> {detail.status}</div>
-                          )}
-
-                          {/* Additional time information */}
-                          {detail.spareTime && (
-                            <div className="col-span-2"><strong>Spare Time:</strong> {detail.spareTime}</div>
-                          )}
-
-                          {/* Remarks */}
-                          {detail.remarks && (
-                            <div className="col-span-2"><strong>Remarks:</strong> {detail.remarks}</div>
-                          )}
+              {/* Vehicle Details (for issue charts with detailed info) */}
+              {selectedDetails.details && selectedDetails.details.length > 0 && (
+                <div className="mb-6">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Vehicle Details
+                  </h4>
+                  <div className="space-y-3">
+                    {selectedDetails.details.map((detail, index) => (
+                      <div key={index} className="p-4 bg-purple-50 rounded-lg border border-purple-200">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                          {Object.entries(detail).map(([key, value]) => (
+                            value && (
+                              <div key={key}>
+                                <span className="font-medium text-gray-700 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}:</span>
+                                <span className="ml-2 text-gray-600">{value}</span>
+                              </div>
+                            )
+                          ))}
                         </div>
                       </div>
                     ))}
@@ -187,17 +257,26 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
                 </div>
               )}
 
-              {Object.values(selectedIssueBreakdown.breakdown).every(count => count === 0) && (
-                <div className="text-center text-gray-500 py-4">
-                  No detailed breakdown available
+              {/* No Data Message */}
+              {selectedDetails.type === 'general' && (!selectedDetails.rawData || selectedDetails.rawData.length === 0) && (
+                <div className="text-center text-gray-500 py-8">
+                  <svg className="w-12 h-12 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <p className="text-lg font-medium">No detailed data available</p>
+                  <p className="text-sm">No records found for Zone {selectedDetails.zone}</p>
                 </div>
               )}
             </div>
 
-            <div className="mt-6 flex justify-end">
+            {/* Footer */}
+            <div className="p-6 border-t border-gray-200 bg-gray-50 flex justify-between items-center">
+              <div className="text-sm text-gray-500">
+                Data for Zone {selectedDetails.zone} • {selectedDetails.title}
+              </div>
               <button
-                onClick={() => setSelectedIssueBreakdown(null)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                onClick={() => setSelectedDetails(null)}
+                className="px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 font-medium shadow-md hover:shadow-lg"
               >
                 Close
               </button>

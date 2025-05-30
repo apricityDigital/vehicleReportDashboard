@@ -10,14 +10,38 @@
 
 @layer components {
   .card {
-    @apply bg-white rounded-lg shadow-md p-6 border border-gray-200;
+    @apply bg-white rounded-xl shadow-lg p-6 border border-gray-100 backdrop-blur-sm bg-white/95 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1;
   }
-  
+
+  .card-header {
+    @apply flex items-center justify-between mb-6 pb-4 border-b border-gray-100;
+  }
+
+  .card-title {
+    @apply text-xl font-bold text-gray-800 flex items-center;
+  }
+
+  .card-icon {
+    @apply w-8 h-8 rounded-lg mr-3 flex items-center justify-center;
+  }
+
   .btn-primary {
-    @apply bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200;
+    @apply bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105;
   }
-  
+
   .btn-secondary {
-    @apply bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-md transition-colors duration-200;
+    @apply bg-white border-2 border-gray-300 hover:border-gray-400 text-gray-700 hover:text-gray-800 font-medium py-2 px-4 rounded-lg shadow-sm hover:shadow-md transition-all duration-200;
+  }
+
+  .filter-input {
+    @apply border-2 border-gray-200 rounded-lg px-4 py-3 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm hover:shadow-md;
+  }
+
+  .gradient-bg {
+    @apply bg-gradient-to-br from-blue-50 via-white to-indigo-50;
+  }
+
+  .glass-effect {
+    @apply backdrop-blur-sm bg-white/90 border border-white/20;
   }
 }

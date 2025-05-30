@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import BarChart from './BarChart';
 import Filters from './Filters';
-import { Bar } from 'react-chartjs-2';
 import {
   fetchAllSheetsData,
   getUniqueZones,
@@ -139,35 +138,65 @@ const Dashboard = () => {
     }
 
     return (
-      <div className="card">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">{CHART_TITLES[sheetName]}</h3>
+      <div className="card group">
+        <div className="card-header">
+          <div className="card-title">
+            <div className="card-icon bg-gradient-to-r from-red-500 to-pink-500">
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
+              </svg>
+            </div>
+            {CHART_TITLES[sheetName]}
+          </div>
+          <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+            Underutilized
+          </div>
+        </div>
 
-        {/* Trip Count Filter inside the card */}
-        <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-            <label htmlFor={`trip-count-${sheetName}`} className="text-sm font-medium text-gray-700">
-              Filter by Trip Count:
-            </label>
+        {/* Enhanced Trip Count Filter */}
+        <div className="mb-6 p-4 bg-gradient-to-r from-red-50 to-pink-50 rounded-xl border border-red-100">
+          <div className="flex items-center mb-3">
+            <svg className="w-4 h-4 text-red-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+            </svg>
+            <span className="text-sm font-semibold text-red-800">Trip Count Filter</span>
+          </div>
+          <div className="relative">
             <select
               id={`trip-count-${sheetName}`}
               value={tripCountFilter}
               onChange={(e) => setTripCountFilter(e.target.value)}
-              className="border border-gray-300 rounded-md px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+              className="w-full border-2 border-red-200 rounded-lg px-4 py-3 bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all duration-200 shadow-sm hover:shadow-md appearance-none cursor-pointer"
             >
               <option value="all">All Vehicles (&lt;3 trips)</option>
               <option value="0">0 Trips Only</option>
               <option value="1">1 Trip Only</option>
               <option value="2">2 Trips Only</option>
             </select>
+            <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
           </div>
         </div>
 
-        <div className="h-80">
-          <Bar
+        <div className="h-80 relative">
+          <BarChart
             key={`${sheetName}-${selectedDate}-${selectedZone}-${tripCountFilter}`}
             data={chartData}
             options={chartOptions}
+            title={CHART_TITLES[sheetName]}
+            loading={false}
+            error={null}
+            sheetName={sheetName}
+            rawData={filteredData}
           />
+          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            <div className="bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded">
+              Click bars for details
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -206,6 +235,7 @@ const Dashboard = () => {
         loading={loading}
         error={error}
         sheetName={sheetName}
+        rawData={filteredData}
       />
     );
   };
@@ -222,16 +252,29 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
       <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+        {/* Enhanced Header */}
+        <div className="mb-8 text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full mb-4 shadow-lg">
+            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          </div>
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-3">
             Daily Vehicle Report Dashboard
           </h1>
-          <p className="text-gray-600">
-            Monitor vehicle performance across different zones and dates
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            Monitor vehicle performance across different zones and dates with real-time analytics
           </p>
+          <div className="mt-4 flex items-center justify-center space-x-2 text-sm text-gray-500">
+            <div className="flex items-center">
+              <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
+              Live Data
+            </div>
+            <span>•</span>
+            <div>Last Updated: {new Date().toLocaleTimeString()}</div>
+          </div>
         </div>
 
         {/* Filters */}
@@ -276,27 +319,70 @@ const Dashboard = () => {
           ))}
         </div>
 
-        {/* Summary Stats */}
+        {/* Enhanced Summary Stats */}
         {!loading && !error && (
-          <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="card text-center">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Total Zones</h3>
-              <p className="text-3xl font-bold text-primary-600">{availableZones.length}</p>
+          <div className="mt-12">
+            <div className="text-center mb-8">
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">Dashboard Overview</h2>
+              <p className="text-gray-600">Key metrics and system information</p>
             </div>
-            <div className="card text-center">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Date Range</h3>
-              <p className="text-sm text-gray-600">
-                {availableDates.length > 0 ? (
-                  <>
-                    {new Date(availableDates[0]).toLocaleDateString()} - {' '}
-                    {new Date(availableDates[availableDates.length - 1]).toLocaleDateString()}
-                  </>
-                ) : 'No data'}
-              </p>
-            </div>
-            <div className="card text-center">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Last Updated</h3>
-              <p className="text-sm text-gray-600">{new Date().toLocaleString()}</p>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="card text-center group hover:scale-105">
+                <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full mx-auto mb-4 group-hover:shadow-lg transition-all duration-300">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-800 mb-2">Total Zones</h3>
+                <p className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-2">
+                  {availableZones.length}
+                </p>
+                <p className="text-sm text-gray-500">Active monitoring zones</p>
+              </div>
+
+              <div className="card text-center group hover:scale-105">
+                <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full mx-auto mb-4 group-hover:shadow-lg transition-all duration-300">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-800 mb-2">Date Range</h3>
+                <div className="text-sm text-gray-600 space-y-1">
+                  {availableDates.length > 0 ? (
+                    <>
+                      <div className="font-medium text-green-600">
+                        {new Date(availableDates[0]).toLocaleDateString()}
+                      </div>
+                      <div className="text-gray-400">to</div>
+                      <div className="font-medium text-green-600">
+                        {new Date(availableDates[availableDates.length - 1]).toLocaleDateString()}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-gray-400">No data available</div>
+                  )}
+                </div>
+              </div>
+
+              <div className="card text-center group hover:scale-105">
+                <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full mx-auto mb-4 group-hover:shadow-lg transition-all duration-300">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-800 mb-2">Last Updated</h3>
+                <p className="text-sm font-medium text-purple-600 mb-1">
+                  {new Date().toLocaleDateString()}
+                </p>
+                <p className="text-sm text-gray-500">
+                  {new Date().toLocaleTimeString()}
+                </p>
+                <div className="mt-2 flex items-center justify-center">
+                  <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
+                  <span className="text-xs text-green-600 font-medium">Live</span>
+                </div>
+              </div>
             </div>
           </div>
         )}
