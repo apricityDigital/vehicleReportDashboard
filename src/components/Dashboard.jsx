@@ -138,7 +138,7 @@ const Dashboard = () => {
     }
 
     return (
-      <div className="card group">
+      <div className="card group overflow-hidden">
         <div className="card-header">
           <div className="card-title">
             <div className="card-icon bg-gradient-to-r from-red-500 to-pink-500">
@@ -154,9 +154,9 @@ const Dashboard = () => {
         </div>
 
         {/* Enhanced Trip Count Filter */}
-        <div className="mb-6 p-4 bg-gradient-to-r from-red-50 to-pink-50 rounded-xl border border-red-100">
+        <div className="mb-4 p-4 bg-gradient-to-r from-red-50 to-pink-50 rounded-xl border border-red-100">
           <div className="flex items-center mb-3">
-            <svg className="w-4 h-4 text-red-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 text-red-600 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
             </svg>
             <span className="text-sm font-semibold text-red-800">Trip Count Filter</span>
@@ -166,14 +166,14 @@ const Dashboard = () => {
               id={`trip-count-${sheetName}`}
               value={tripCountFilter}
               onChange={(e) => setTripCountFilter(e.target.value)}
-              className="w-full border-2 border-red-200 rounded-lg px-4 py-3 bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all duration-200 shadow-sm hover:shadow-md appearance-none cursor-pointer"
+              className="w-full border-2 border-red-200 rounded-lg px-4 py-2.5 pr-10 bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all duration-200 shadow-sm hover:shadow-md appearance-none cursor-pointer text-sm"
             >
               <option value="all">All Vehicles (&lt;3 trips)</option>
               <option value="0">0 Trips Only</option>
               <option value="1">1 Trip Only</option>
               <option value="2">2 Trips Only</option>
             </select>
-            <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+            <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none">
               <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
@@ -181,19 +181,33 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="h-80 relative">
-          <BarChart
-            key={`${sheetName}-${selectedDate}-${selectedZone}-${tripCountFilter}`}
-            data={chartData}
-            options={chartOptions}
-            title={CHART_TITLES[sheetName]}
-            loading={false}
-            error={null}
-            sheetName={sheetName}
-            rawData={filteredData}
-          />
-          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-            <div className="bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded">
+        {/* Chart Container with proper spacing */}
+        <div className="relative">
+          {/* Click instruction */}
+          <div className="mb-2 text-sm text-gray-600 text-center flex items-center justify-center">
+            <svg className="w-4 h-4 mr-1 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.121 2.122" />
+            </svg>
+            Click on any bar to see detailed information
+          </div>
+
+          {/* Chart with fixed height and overflow handling */}
+          <div className="h-80 w-full overflow-hidden">
+            <BarChart
+              key={`${sheetName}-${selectedDate}-${selectedZone}-${tripCountFilter}`}
+              data={chartData}
+              options={chartOptions}
+              title={CHART_TITLES[sheetName]}
+              loading={false}
+              error={null}
+              sheetName={sheetName}
+              rawData={filteredData}
+            />
+          </div>
+
+          {/* Hover tooltip positioned at bottom to avoid overlap */}
+          <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10 pointer-events-none">
+            <div className="bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap">
               Click bars for details
             </div>
           </div>

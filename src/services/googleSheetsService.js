@@ -182,7 +182,66 @@ const transformVehicleBreakdownData = (data) => {
   return longData;
 };
 
-// Transform late vehicle data (for after 6pm, after 7pm, fuel station) to preserve detailed information
+// Transform fuel station data with specific timing information
+const transformFuelStationData = (data) => {
+  const longData = [];
+
+  data.forEach(row => {
+    const date = normalizeDate(row.Date);
+    let zone = row.Zone;
+    const fuelStationTimes = row['Fuel Station Times'] || '';
+    const vehicleCount = parseInt(row['Count of Vehicles']) || 0;
+
+    // Skip empty rows
+    if (!date || !zone || vehicleCount === 0) return;
+
+    // Extract zone number from zone names like "Zone -3" or "Zone 5"
+    if (zone) {
+      const zoneMatch = zone.match(/Zone\s*(-?\d+)/);
+      if (zoneMatch) {
+        zone = Math.abs(parseInt(zoneMatch[1])); // Convert to positive number
+      }
+    }
+
+    // Parse fuel station times (comma-separated)
+    const times = fuelStationTimes.split(',').map(time => time.trim()).filter(time => time);
+
+    // Create individual vehicle details from times
+    const details = [];
+    times.forEach((time, index) => {
+      details.push({
+        vehicleNo: `Vehicle ${index + 1}`, // Generate vehicle numbers since not provided
+        time: time,
+        issue: 'Fuel Station Visit',
+        status: 'Completed',
+        remarks: `Fuel station visit at ${time}`
+      });
+    });
+
+    // Add any remaining vehicles if count is higher than times provided
+    for (let i = times.length; i < vehicleCount; i++) {
+      details.push({
+        vehicleNo: `Vehicle ${i + 1}`,
+        time: 'Time not specified',
+        issue: 'Fuel Station Visit',
+        status: 'Completed',
+        remarks: 'Fuel station visit - time not recorded'
+      });
+    }
+
+    longData.push({
+      Date: date,
+      Zone: String(zone),
+      Count: vehicleCount,
+      FuelStationTimes: fuelStationTimes,
+      Details: details
+    });
+  });
+
+  return longData;
+};
+
+// Transform late vehicle data (for after 6pm, after 7pm) to preserve detailed information
 const transformLateVehicleData = (data) => {
   const longData = [];
   const zoneBreakdowns = {};
@@ -419,8 +478,11 @@ export const fetchSheetData = async (sheetName) => {
       } else if (sheetName === 'vehicleBreakdown' && hasVehicleBreakdownColumns) {
         // Special handling for vehicle breakdown data with detailed breakdown information
         parsedData = transformVehicleBreakdownData(parsedData);
-      } else if (sheetName === 'issuesPost0710' || sheetName === 'fuelStation' || sheetName === 'post06AMOpenIssues') {
-        // Special handling for late vehicle data (after 6pm, after 7pm, fuel station)
+      } else if (sheetName === 'fuelStation') {
+        // Special handling for fuel station data with timing information
+        parsedData = transformFuelStationData(parsedData);
+      } else if (sheetName === 'issuesPost0710' || sheetName === 'post06AMOpenIssues') {
+        // Special handling for late vehicle data (after 6pm, after 7pm)
         // Try detailed transformation first, fallback to basic if no detailed data
         const detailedData = transformLateVehicleData(parsedData);
         if (detailedData.length === 0 && parsedData.length > 0) {
@@ -433,7 +495,7 @@ export const fetchSheetData = async (sheetName) => {
         } else {
           parsedData = detailedData;
         }
-      } else if (hasIssueColumns && ['issuesPost0710', 'fuelStation', 'post06AMOpenIssues'].includes(sheetName)) {
+      } else if (hasIssueColumns && ['issuesPost0710', 'post06AMOpenIssues'].includes(sheetName)) {
         // Special handling for issue data to preserve breakdown information
         parsedData = transformIssueData(parsedData);
       } else if (hasZoneField && hasMultipleCountColumns) {

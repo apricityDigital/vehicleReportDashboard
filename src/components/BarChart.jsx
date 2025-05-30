@@ -45,15 +45,50 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
       } else {
         // For all other charts, show detailed data from the raw sheet data
         const zoneData = rawData.filter(row => String(row.Zone) === String(label));
-        setSelectedDetails({
-          type: 'general',
-          zone: label,
-          title: title,
-          sheetName: sheetName,
-          total: value,
-          rawData: zoneData,
-          details: null
-        });
+
+        // Special handling for fuel station and timing-related charts
+        if (sheetName === 'fuelStation' || sheetName === 'issuesPost0710' || sheetName === 'post06AMOpenIssues') {
+          // Extract timing details from the zone data
+          let timingDetails = null;
+
+          // Look for Details array in the zone data (this should be available from the new transformFuelStationData function)
+          const zoneWithDetails = zoneData.find(row => row.Details && Array.isArray(row.Details) && row.Details.length > 0);
+          if (zoneWithDetails) {
+            timingDetails = zoneWithDetails.Details;
+          } else {
+            // Fallback: create timing details from individual rows if Details array not found
+            timingDetails = zoneData.map(row => ({
+              vehicleNo: row['Vehicle No.'] || row['Vehicle Number'] || row['Vehicle'] || `Vehicle ${Math.random().toString(36).substr(2, 5)}`,
+              time: row.Time || row['Late Time'] || row['Arrival Time'] || row['Departure Time'] || row['Fuel Station Time'] || 'Time not specified',
+              issue: row.Issue || row.Reason || row.Type || (sheetName === 'fuelStation' ? 'Fuel Station Visit' : 'Late Vehicle'),
+              status: row.Status || row['Spare/OK'] || 'Unknown',
+              breakdownTime: row['Breakdown Time'] || '',
+              spareTime: row['Spare/OK Time'] || row['Spare Time'] || '',
+              spareStatus: row['Spare Status'] || '',
+              remarks: row.Remarks || row.Notes || ''
+            })).filter(detail => detail.vehicleNo && detail.time);
+          }
+
+          setSelectedDetails({
+            type: 'timing',
+            zone: label,
+            title: title,
+            sheetName: sheetName,
+            total: value,
+            rawData: zoneData,
+            details: timingDetails && timingDetails.length > 0 ? timingDetails : null
+          });
+        } else {
+          setSelectedDetails({
+            type: 'general',
+            zone: label,
+            title: title,
+            sheetName: sheetName,
+            total: value,
+            rawData: zoneData,
+            details: null
+          });
+        }
       }
     }
   };
@@ -115,13 +150,16 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
   return (
     <>
       <div className="card">
-        <div className="mb-2 text-sm text-gray-600 text-center flex items-center justify-center">
-          <svg className="w-4 h-4 mr-1 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.121 2.122" />
-          </svg>
-          Click on any bar to see detailed information
-        </div>
-        <div className="h-80">
+        {/* Only show click instruction for non-lessThan3Trips charts since lessThan3Trips has its own instruction */}
+        {sheetName !== 'lessThan3Trips' && (
+          <div className="mb-2 text-sm text-gray-600 text-center flex items-center justify-center">
+            <svg className="w-4 h-4 mr-1 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.121 2.122" />
+            </svg>
+            Click on any bar to see detailed information
+          </div>
+        )}
+        <div className="h-80 w-full overflow-hidden">
           <Bar data={data} options={enhancedOptions} />
         </div>
       </div>
@@ -193,6 +231,107 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
                 </div>
               )}
 
+              {/* Timing Data (for fuel station and late vehicle charts) */}
+              {selectedDetails.type === 'timing' && selectedDetails.details && selectedDetails.details.length > 0 && (
+                <div className="mb-6">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    {selectedDetails.sheetName === 'fuelStation' ? 'Fuel Station Visit Details' : 'Late Vehicle Timing Details'} ({selectedDetails.details.length} vehicles)
+                  </h4>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {selectedDetails.details.map((detail, index) => (
+                      <div key={index} className="p-4 bg-orange-50 rounded-lg border border-orange-200 hover:shadow-md transition-shadow">
+                        <div className="space-y-3">
+                          {/* Vehicle Information */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center">
+                              <svg className="w-4 h-4 mr-2 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              <span className="font-semibold text-gray-800">
+                                {detail.vehicleNo || `Vehicle #${index + 1}`}
+                              </span>
+                            </div>
+                            {detail.status && (
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                detail.status.toLowerCase().includes('ok') || detail.status.toLowerCase().includes('resolved')
+                                  ? 'bg-green-100 text-green-800'
+                                  : 'bg-red-100 text-red-800'
+                              }`}>
+                                {detail.status}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Timing Information */}
+                          <div className="grid grid-cols-1 gap-2 text-sm">
+                            {detail.time && (
+                              <div className="flex items-center">
+                                <svg className="w-3 h-3 mr-2 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span className="font-medium text-gray-700">
+                                  {selectedDetails.sheetName === 'fuelStation' ? 'Fuel Station Time:' : 'Late Time:'}
+                                </span>
+                                <span className="ml-2 text-orange-600 font-semibold">{detail.time}</span>
+                              </div>
+                            )}
+
+                            {detail.breakdownTime && (
+                              <div className="flex items-center">
+                                <svg className="w-3 h-3 mr-2 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                                </svg>
+                                <span className="font-medium text-gray-700">Breakdown Time:</span>
+                                <span className="ml-2 text-red-600 font-semibold">{detail.breakdownTime}</span>
+                              </div>
+                            )}
+
+                            {detail.spareTime && (
+                              <div className="flex items-center">
+                                <svg className="w-3 h-3 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span className="font-medium text-gray-700">Spare Time:</span>
+                                <span className="ml-2 text-blue-600 font-semibold">{detail.spareTime}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Issue/Reason */}
+                          {detail.issue && (
+                            <div className="pt-2 border-t border-orange-200">
+                              <span className="font-medium text-gray-700">
+                                {selectedDetails.sheetName === 'fuelStation' ? 'Reason:' : 'Issue:'}
+                              </span>
+                              <span className="ml-2 text-gray-600">{detail.issue}</span>
+                            </div>
+                          )}
+
+                          {/* Additional Status Information */}
+                          {detail.spareStatus && detail.spareStatus !== detail.status && (
+                            <div className="pt-1">
+                              <span className="font-medium text-gray-700">Spare Status:</span>
+                              <span className="ml-2 text-gray-600">{detail.spareStatus}</span>
+                            </div>
+                          )}
+
+                          {/* Remarks */}
+                          {detail.remarks && (
+                            <div className="pt-2 border-t border-orange-200">
+                              <span className="font-medium text-gray-700">Remarks:</span>
+                              <p className="mt-1 text-gray-600 text-sm">{detail.remarks}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Raw Data Table (for general charts) */}
               {selectedDetails.type === 'general' && selectedDetails.rawData && selectedDetails.rawData.length > 0 && (
                 <div className="mb-6">
@@ -257,8 +396,45 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
                 </div>
               )}
 
+              {/* Fallback Raw Data for Timing Charts without Details */}
+              {selectedDetails.type === 'timing' && (!selectedDetails.details || selectedDetails.details.length === 0) && selectedDetails.rawData && selectedDetails.rawData.length > 0 && (
+                <div className="mb-6">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    {selectedDetails.sheetName === 'fuelStation' ? 'Fuel Station Records' : 'Late Vehicle Records'} ({selectedDetails.rawData.length} entries)
+                  </h4>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full bg-white border border-gray-200 rounded-lg">
+                      <thead className="bg-orange-50">
+                        <tr>
+                          {Object.keys(selectedDetails.rawData[0]).map((key) => (
+                            <th key={key} className="px-4 py-3 text-left text-xs font-medium text-orange-700 uppercase tracking-wider border-b">
+                              {key}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {selectedDetails.rawData.map((row, index) => (
+                          <tr key={index} className="hover:bg-orange-50">
+                            {Object.entries(row).map(([key, value]) => (
+                              <td key={key} className="px-4 py-3 text-sm text-gray-900 border-b">
+                                {typeof value === 'object' && value !== null ? JSON.stringify(value) : (value || '-')}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
               {/* No Data Message */}
-              {selectedDetails.type === 'general' && (!selectedDetails.rawData || selectedDetails.rawData.length === 0) && (
+              {((selectedDetails.type === 'general' && (!selectedDetails.rawData || selectedDetails.rawData.length === 0)) ||
+                (selectedDetails.type === 'timing' && (!selectedDetails.details || selectedDetails.details.length === 0) && (!selectedDetails.rawData || selectedDetails.rawData.length === 0))) && (
                 <div className="text-center text-gray-500 py-8">
                   <svg className="w-12 h-12 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
