@@ -68,7 +68,7 @@ const transformWideToLong = (data) => {
   const longData = [];
 
   data.forEach(row => {
-    const date = row.Date;
+    const date = normalizeDate(row.Date);
     Object.keys(row).forEach(key => {
       if (key !== 'Date' && key.startsWith('Zone ')) {
         const zone = key.replace('Zone ', '');
@@ -116,6 +116,177 @@ const transformMultiColumnData = (data) => {
         Date: date,
         Zone: zone,
         Count: totalCount
+      });
+    }
+  });
+
+  return longData;
+};
+
+// Transform vehicle breakdown data to preserve detailed breakdown information
+const transformVehicleBreakdownData = (data) => {
+  const longData = [];
+  const zoneBreakdowns = {};
+
+  data.forEach(row => {
+    const date = normalizeDate(row.Date);
+    let zone = row.Zone;
+    const issue = row.Issue || '';
+    const vehicleNo = row['Vehicle No.'] || '';
+    const breakdownTime = row['Breakdown Time'] || '';
+    const spareStatus = row['Spare/OK'] || '';
+    const spareTime = row['Spare/OK Time'] || '';
+
+    // Skip empty rows
+    if (!date || !zone || !issue) return;
+
+    // Ensure zone is a string for consistency
+    zone = String(zone);
+
+    // Initialize zone breakdown if not exists
+    if (!zoneBreakdowns[zone]) {
+      zoneBreakdowns[zone] = {
+        Date: date,
+        Zone: zone,
+        Count: 0,
+        IssueBreakdown: {},
+        Details: []
+      };
+    }
+
+    // Increment count
+    zoneBreakdowns[zone].Count += 1;
+
+    // Track issue types
+    if (!zoneBreakdowns[zone].IssueBreakdown[issue]) {
+      zoneBreakdowns[zone].IssueBreakdown[issue] = 0;
+    }
+    zoneBreakdowns[zone].IssueBreakdown[issue] += 1;
+
+    // Store detailed information
+    zoneBreakdowns[zone].Details.push({
+      vehicleNo,
+      issue,
+      breakdownTime,
+      spareStatus,
+      spareTime
+    });
+  });
+
+  // Convert to array format
+  Object.values(zoneBreakdowns).forEach(zoneData => {
+    if (zoneData.Count > 0) {
+      longData.push(zoneData);
+    }
+  });
+
+  return longData;
+};
+
+// Transform late vehicle data (for after 6pm, after 7pm, fuel station) to preserve detailed information
+const transformLateVehicleData = (data) => {
+  const longData = [];
+  const zoneBreakdowns = {};
+
+  data.forEach(row => {
+    const date = normalizeDate(row.Date);
+    let zone = row.Zone;
+
+    // Handle different possible column names for vehicle information
+    const vehicleNo = row['Vehicle No.'] || row['Vehicle Number'] || row['Vehicle'] || '';
+    const issue = row.Issue || row.Reason || row.Type || 'Late Vehicle';
+    const time = row.Time || row['Late Time'] || row['Arrival Time'] || row['Departure Time'] || '';
+    const status = row.Status || row['Spare/OK'] || '';
+    const remarks = row.Remarks || row.Notes || '';
+
+    // Skip empty rows
+    if (!date || !zone) return;
+
+    // Ensure zone is a string for consistency
+    zone = String(zone);
+
+    // Initialize zone breakdown if not exists
+    if (!zoneBreakdowns[zone]) {
+      zoneBreakdowns[zone] = {
+        Date: date,
+        Zone: zone,
+        Count: 0,
+        IssueBreakdown: {},
+        Details: []
+      };
+    }
+
+    // Increment count
+    zoneBreakdowns[zone].Count += 1;
+
+    // Track issue types
+    if (!zoneBreakdowns[zone].IssueBreakdown[issue]) {
+      zoneBreakdowns[zone].IssueBreakdown[issue] = 0;
+    }
+    zoneBreakdowns[zone].IssueBreakdown[issue] += 1;
+
+    // Store detailed information
+    zoneBreakdowns[zone].Details.push({
+      vehicleNo,
+      issue,
+      time,
+      status,
+      remarks
+    });
+  });
+
+  // Convert to array format
+  Object.values(zoneBreakdowns).forEach(zoneData => {
+    if (zoneData.Count > 0) {
+      longData.push(zoneData);
+    }
+  });
+
+  return longData;
+};
+
+// Transform issue data to preserve detailed issue breakdown
+const transformIssueData = (data) => {
+  const longData = [];
+
+  data.forEach(row => {
+    const date = normalizeDate(row.Date);
+    let zone = row.Zone;
+
+    // Extract zone number from zone names like "Zone 1 - Kila Maidan" or "Zone -1"
+    if (zone) {
+      const zoneMatch = zone.match(/Zone\s*(-?\d+)/);
+      if (zoneMatch) {
+        zone = zoneMatch[1];
+      }
+    }
+
+    // Extract issue counts
+    const driverIssue = parseInt(row['Driver Issue']) || 0;
+    const helperIssue = parseInt(row['Helper Issue']) || 0;
+    const breakdownIssue = parseInt(row['Breakdown Issue']) || 0;
+    const workshopIssue = parseInt(row['Workshop Issue']) || 0;
+    const otherIssue = parseInt(row['Other Issue']) || 0;
+
+    const totalCount = driverIssue + helperIssue + breakdownIssue + workshopIssue + otherIssue;
+
+    if (totalCount > 0) {
+      longData.push({
+        Date: date,
+        Zone: zone,
+        Count: totalCount,
+        DriverIssue: driverIssue,
+        HelperIssue: helperIssue,
+        BreakdownIssue: breakdownIssue,
+        WorkshopIssue: workshopIssue,
+        OtherIssue: otherIssue,
+        IssueBreakdown: {
+          'Driver Issue': driverIssue,
+          'Helper Issue': helperIssue,
+          'Breakdown Issue': breakdownIssue,
+          'Workshop Issue': workshopIssue,
+          'Other Issue': otherIssue
+        }
       });
     }
   });
@@ -228,6 +399,13 @@ export const fetchSheetData = async (sheetName) => {
       const hasZoneColumns = headers.some(header => header.startsWith('Zone '));
       const hasZoneField = headers.includes('Zone');
       const hasPercentageColumns = headers.some(header => header.includes('%'));
+      const hasIssueColumns = headers.some(header =>
+        header.includes('Driver Issue') ||
+        header.includes('Helper Issue') ||
+        header.includes('Breakdown Issue') ||
+        header.includes('Workshop Issue')
+      );
+      const hasVehicleBreakdownColumns = headers.includes('Issue') && headers.includes('Vehicle No.');
       const hasMultipleCountColumns = headers.filter(h => h !== 'Date' && h !== 'Zone' && !isNaN(parseInt(parsedData[0][h] || 0))).length > 1;
 
       if (hasZoneColumns) {
@@ -239,6 +417,26 @@ export const fetchSheetData = async (sheetName) => {
       } else if (sheetName === 'lessThan3Trips') {
         // Special handling for lessThan3Trips data to preserve individual trip counts
         parsedData = transformLessThan3TripsData(parsedData);
+      } else if (sheetName === 'vehicleBreakdown' && hasVehicleBreakdownColumns) {
+        // Special handling for vehicle breakdown data with detailed breakdown information
+        parsedData = transformVehicleBreakdownData(parsedData);
+      } else if (sheetName === 'issuesPost0710' || sheetName === 'fuelStation' || sheetName === 'post06AMOpenIssues') {
+        // Special handling for late vehicle data (after 6pm, after 7pm, fuel station)
+        // Try detailed transformation first, fallback to basic if no detailed data
+        const detailedData = transformLateVehicleData(parsedData);
+        if (detailedData.length === 0 && parsedData.length > 0) {
+          // Fallback to basic transformation if no detailed data found
+          parsedData = parsedData.map(row => ({
+            ...row,
+            Date: normalizeDate(row.Date),
+            Count: row.Count || 1 // Default count of 1 if not specified
+          })).filter(row => row.Date && row.Zone);
+        } else {
+          parsedData = detailedData;
+        }
+      } else if ((sheetName === 'onBoardAfter3PM') && hasIssueColumns) {
+        // Special handling for issue data to preserve breakdown information
+        parsedData = transformIssueData(parsedData);
       } else if (hasZoneField && hasMultipleCountColumns) {
         // Format with Zone field and multiple count columns
         parsedData = transformMultiColumnData(parsedData);
@@ -246,9 +444,24 @@ export const fetchSheetData = async (sheetName) => {
         // Standardize the onRouteVehicles sheet to use 'Count' instead of 'On Route Vehicle Count'
         parsedData = parsedData.map(row => ({
           ...row,
-          Count: row['On Route Vehicle Count']
-        }));
+          Date: normalizeDate(row.Date),
+          Count: row['On Route Vehicle Count'] || row['Count'] || 0
+        })).filter(row => row.Date && row.Zone); // Filter out empty rows
+      } else {
+        // Default transformation for other sheets
+        parsedData = parsedData.map(row => ({
+          ...row,
+          Date: normalizeDate(row.Date),
+          Count: row.Count || 1
+        })).filter(row => row.Date && row.Zone);
       }
+    }
+
+    // Debug logging for troubleshooting data issues
+    if (['issuesPost0710', 'fuelStation', 'post06AMOpenIssues'].includes(sheetName)) {
+      console.log(`${sheetName} - Raw data sample:`, parsedData.slice(0, 3));
+      console.log(`${sheetName} - Total rows:`, parsedData.length);
+      console.log(`${sheetName} - Headers:`, parsedData.length > 0 ? Object.keys(parsedData[0]) : 'No data');
     }
 
     return parsedData;
@@ -275,17 +488,35 @@ export const fetchAllSheetsData = async () => {
   return allData;
 };
 
-// Get unique zones from data
+// Get unique zones from data (excluding negative zones)
 export const getUniqueZones = (data) => {
   const zones = new Set();
   Object.values(data).forEach(sheetData => {
     sheetData.forEach(row => {
       if (row.Zone) {
-        zones.add(row.Zone);
+        const zoneNumber = Number(row.Zone);
+        // Only include zones with positive numbers
+        if (!isNaN(zoneNumber) && zoneNumber > 0) {
+          zones.add(row.Zone);
+        }
       }
     });
   });
   return Array.from(zones).sort((a, b) => Number(a) - Number(b));
+};
+
+// Normalize date format
+const normalizeDate = (dateStr) => {
+  if (!dateStr) return '';
+
+  // Handle different date formats
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) {
+    return dateStr; // Return original if can't parse
+  }
+
+  // Return in YYYY-MM-DD format
+  return date.toISOString().split('T')[0];
 };
 
 // Get unique dates from data
@@ -294,7 +525,10 @@ export const getUniqueDates = (data) => {
   Object.values(data).forEach(sheetData => {
     sheetData.forEach(row => {
       if (row.Date) {
-        dates.add(row.Date);
+        const normalizedDate = normalizeDate(row.Date);
+        if (normalizedDate) {
+          dates.add(normalizedDate);
+        }
       }
     });
   });

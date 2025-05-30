@@ -79,6 +79,7 @@ const Dashboard = () => {
         title={CHART_TITLES[sheetName]}
         loading={loading}
         error={error}
+        sheetName={sheetName}
       />
     );
   };

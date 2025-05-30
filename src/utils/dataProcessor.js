@@ -5,17 +5,36 @@ export const getCurrentDate = () => {
   return format(new Date(), 'yyyy-MM-dd');
 };
 
+// Normalize date format to handle different date formats
+const normalizeDate = (dateStr) => {
+  if (!dateStr) return '';
+
+  // Handle different date formats
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) {
+    return dateStr; // Return original if can't parse
+  }
+
+  return format(date, 'yyyy-MM-dd');
+};
+
 // Filter data by date, zone, and trip count (for lessThan3Trips sheet)
 export const filterData = (data, selectedDate, selectedZone, tripCountFilter = null) => {
-  if (!data || data.length === 0) return [];
+  if (!data || data.length === 0) {
+    return [];
+  }
 
-  return data.filter(row => {
-    const dateMatch = !selectedDate || row.Date === selectedDate;
-    const zoneMatch = !selectedZone || row.Zone === selectedZone;
+  const filtered = data.filter(row => {
+    // Normalize dates for comparison
+    const rowDate = normalizeDate(row.Date);
+    const filterDate = normalizeDate(selectedDate);
+
+    const dateMatch = !selectedDate || rowDate === filterDate;
+    const zoneMatch = !selectedZone || String(row.Zone) === String(selectedZone);
 
     // Apply trip count filter for lessThan3Trips data
     let tripCountMatch = true;
-    if (tripCountFilter !== null && row.TripCount0 !== undefined) {
+    if (tripCountFilter !== null && tripCountFilter !== 'all' && row.TripCount0 !== undefined) {
       switch (tripCountFilter) {
         case '0':
           tripCountMatch = row.TripCount0 > 0;
@@ -26,7 +45,6 @@ export const filterData = (data, selectedDate, selectedZone, tripCountFilter = n
         case '2':
           tripCountMatch = row.TripCount2 > 0;
           break;
-        case 'all':
         default:
           tripCountMatch = true; // Show all vehicles with <3 trips
           break;
@@ -35,6 +53,8 @@ export const filterData = (data, selectedDate, selectedZone, tripCountFilter = n
 
     return dateMatch && zoneMatch && tripCountMatch;
   });
+
+  return filtered;
 };
 
 // Get dataset label based on sheet type
@@ -124,6 +144,7 @@ export const processDataForChart = (data, valueField, labelField = 'Zone', sheet
 
   const isPercentageChart = sheetName === 'glitchPercentage';
   const isLessThan3TripsChart = sheetName === 'lessThan3Trips';
+  const isIssueChart = ['issuesPost0710', 'vehicleBreakdown', 'fuelStation', 'post06AMOpenIssues', 'onBoardAfter3PM'].includes(sheetName);
 
   if (isLessThan3TripsChart && tripCountFilter && tripCountFilter !== 'all') {
     // Special handling for lessThan3Trips with specific trip count filter
@@ -132,6 +153,13 @@ export const processDataForChart = (data, valueField, labelField = 'Zone', sheet
 
     data.forEach((row) => {
       const label = row[labelField] || 'Unknown';
+
+      // Filter out negative zones
+      const zoneNumber = Number(label);
+      if (!isNaN(zoneNumber) && zoneNumber <= 0) {
+        return; // Skip negative zones
+      }
+
       let value = 0;
 
       // Get the specific trip count based on filter
@@ -185,6 +213,76 @@ export const processDataForChart = (data, valueField, labelField = 'Zone', sheet
         borderSkipped: false
       }]
     };
+  } else if (isIssueChart) {
+    // Special handling for issue charts with breakdown data
+    const groupedData = {};
+    const issueBreakdowns = {};
+    const vehicleDetails = {};
+
+    data.forEach(item => {
+      const label = item[labelField];
+      const value = parseFloat(item[valueField]) || 0;
+
+      // Filter out negative zones
+      const zoneNumber = Number(label);
+      if (!isNaN(zoneNumber) && zoneNumber <= 0) {
+        return; // Skip negative zones
+      }
+
+      if (groupedData[label]) {
+        groupedData[label] += value;
+      } else {
+        groupedData[label] = value;
+      }
+
+      // Store issue breakdown for tooltips
+      if (item.IssueBreakdown) {
+        if (!issueBreakdowns[label]) {
+          issueBreakdowns[label] = {};
+        }
+
+        Object.keys(item.IssueBreakdown).forEach(issueType => {
+          if (!issueBreakdowns[label][issueType]) {
+            issueBreakdowns[label][issueType] = 0;
+          }
+          issueBreakdowns[label][issueType] += item.IssueBreakdown[issueType] || 0;
+        });
+      }
+
+      // Store vehicle details for breakdown charts
+      if (item.Details && item.Details.length > 0) {
+        if (!vehicleDetails[label]) {
+          vehicleDetails[label] = [];
+        }
+        vehicleDetails[label] = vehicleDetails[label].concat(item.Details);
+      }
+    });
+
+    const labels = Object.keys(groupedData).sort((a, b) => {
+      const numA = parseInt(a);
+      const numB = parseInt(b);
+      if (!isNaN(numA) && !isNaN(numB)) {
+        return numA - numB;
+      }
+      return a.localeCompare(b);
+    });
+
+    const values = labels.map(label => groupedData[label]);
+    const colors = getChartColors(sheetName);
+
+    return {
+      labels,
+      datasets: [{
+        label: getDatasetLabel(sheetName),
+        data: values,
+        ...colors,
+        borderWidth: 2,
+        borderRadius: 4,
+        borderSkipped: false,
+        issueBreakdowns: issueBreakdowns, // Store breakdown data for tooltips
+        vehicleDetails: vehicleDetails // Store vehicle details for breakdown charts
+      }]
+    };
   } else if (isPercentageChart) {
     // Special handling for percentage charts with dual data
     const groupedSoftware = {};
@@ -193,6 +291,13 @@ export const processDataForChart = (data, valueField, labelField = 'Zone', sheet
 
     data.forEach((row) => {
       const label = row[labelField] || 'Unknown';
+
+      // Filter out negative zones
+      const zoneNumber = Number(label);
+      if (!isNaN(zoneNumber) && zoneNumber <= 0) {
+        return; // Skip negative zones
+      }
+
       const softwarePercentage = row.SoftwarePercentage || 0;
       const actualPercentage = row.ActualPercentage || 0;
       const remarks = row.Remarks || '';
@@ -285,6 +390,13 @@ export const processDataForChart = (data, valueField, labelField = 'Zone', sheet
 
   data.forEach((row) => {
     const label = row[labelField] || 'Unknown';
+
+    // Filter out negative zones
+    const zoneNumber = Number(label);
+    if (!isNaN(zoneNumber) && zoneNumber <= 0) {
+      return; // Skip negative zones
+    }
+
     const rawValue = row[valueField];
     const value = parseInt(rawValue) || 0;
     const remarks = row.Remarks || '';
@@ -374,6 +486,7 @@ const getAxisLabels = (sheetName) => {
 export const getChartConfig = (title, sheetName) => {
   const axisLabels = getAxisLabels(sheetName);
   const isPercentageChart = sheetName === 'glitchPercentage';
+  const isIssueChart = ['issuesPost0710', 'vehicleBreakdown', 'fuelStation', 'post06AMOpenIssues', 'onBoardAfter3PM'].includes(sheetName);
 
   return {
     responsive: true,
@@ -439,6 +552,28 @@ export const getChartConfig = (title, sheetName) => {
               return `Note: ${context.raw.remarks}`;
             }
             return '';
+          },
+          afterBody: function(context) {
+            if (isIssueChart && context.length > 0) {
+              const datasetIndex = context[0].datasetIndex;
+              const dataset = context[0].chart.data.datasets[datasetIndex];
+              const label = context[0].label;
+
+              if (dataset.issueBreakdowns && dataset.issueBreakdowns[label]) {
+                const breakdown = dataset.issueBreakdowns[label];
+                const lines = ['', 'Issue Breakdown:'];
+
+                Object.keys(breakdown).forEach(issueType => {
+                  const count = breakdown[issueType];
+                  if (count > 0) {
+                    lines.push(`${issueType}: ${count}`);
+                  }
+                });
+
+                return lines.length > 2 ? lines : [];
+              }
+            }
+            return [];
           }
         }
       }
