@@ -10,7 +10,9 @@ const SHEET_GIDS = {
   issuesPost0710: '203626227',
   fuelStation: '431461673',
   post06AMOpenIssues: '291765477',
-  vehicleBreakdown: '213524255'
+  vehicleBreakdown: '213524255',
+  vehicleNumbers: '510665731',
+  workshopDeparture: '1903869379'
 };
 
 // Convert Google Sheets to CSV URL
@@ -433,6 +435,66 @@ const transformPercentageData = (data) => {
   return longData;
 };
 
+// Transform vehicle numbers data to standardized format
+const transformVehicleNumbersData = (data) => {
+  const longData = [];
+
+  data.forEach(row => {
+    const date = normalizeDate(row.Date);
+    let zone = row.Zone;
+    const vehicleNumbers = row['Vehicle Numbers'] || '';
+    const totalVehicles = parseInt(row['Total Vehicles']) || 1;
+
+    // Skip empty rows
+    if (!date || !zone) return;
+
+    // Ensure zone is a string for consistency
+    zone = String(zone);
+
+    longData.push({
+      Date: date,
+      Zone: zone,
+      Count: totalVehicles,
+      VehicleNumbers: vehicleNumbers,
+      TotalVehicles: totalVehicles
+    });
+  });
+
+  return longData;
+};
+
+// Transform workshop departure data to standardized format
+const transformWorkshopDepartureData = (data) => {
+  const longData = [];
+
+  data.forEach(row => {
+    const date = normalizeDate(row.Date);
+    let zone = row.Zone;
+    const ward = row.Ward || '';
+    const permanentVehicle = row['Permanent Vehicle Number'] || '';
+    const spareVehicle = row['Spare Vehicle Number'] || '';
+    const departureTime = row['Workshop Departure Time'] || '';
+
+    // Skip empty rows
+    if (!date || !zone) return;
+
+    // Ensure zone is a string for consistency
+    zone = String(zone);
+
+    longData.push({
+      Date: date,
+      Zone: zone,
+      Count: 1, // Each row represents one vehicle departure
+      Ward: ward,
+      PermanentVehicle: permanentVehicle,
+      SpareVehicle: spareVehicle,
+      DepartureTime: departureTime
+    });
+  });
+
+  return longData;
+};
+
 // Fetch data from a specific sheet
 export const fetchSheetData = async (sheetName) => {
   try {
@@ -501,6 +563,12 @@ export const fetchSheetData = async (sheetName) => {
       } else if (hasZoneField && hasMultipleCountColumns) {
         // Format with Zone field and multiple count columns
         parsedData = transformMultiColumnData(parsedData);
+      } else if (sheetName === 'vehicleNumbers') {
+        // Special handling for vehicle numbers data
+        parsedData = transformVehicleNumbersData(parsedData);
+      } else if (sheetName === 'workshopDeparture') {
+        // Special handling for workshop departure data
+        parsedData = transformWorkshopDepartureData(parsedData);
       } else if (sheetName === 'onRouteVehicles') {
         // Standardize the onRouteVehicles sheet to use 'Count' instead of 'On Route Vehicle Count'
         parsedData = parsedData.map(row => ({

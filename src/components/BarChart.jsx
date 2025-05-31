@@ -72,6 +72,28 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
             rawData: zoneData,
             details: null
           });
+        } else if (sheetName === 'vehicleNumbers') {
+          // Special handling for vehicle numbers chart
+          setSelectedDetails({
+            type: 'vehicleNumbers',
+            zone: label,
+            title: title,
+            sheetName: sheetName,
+            total: value,
+            rawData: zoneData,
+            details: null
+          });
+        } else if (sheetName === 'workshopDeparture') {
+          // Special handling for workshop departure chart
+          setSelectedDetails({
+            type: 'workshopDeparture',
+            zone: label,
+            title: title,
+            sheetName: sheetName,
+            total: value,
+            rawData: zoneData,
+            details: null
+          });
         } else if (sheetName === 'fuelStation' || sheetName === 'issuesPost0710' || sheetName === 'post06AMOpenIssues') {
           // Extract timing details from the zone data
           let timingDetails = null;
@@ -229,7 +251,9 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
                     </div>
                     <div className="text-sm text-blue-500">
                       {selectedDetails.type === 'issue' ? 'Total Issues' :
-                       selectedDetails.type === 'percentage' ? 'Route Coverage' : 'Total Count'}
+                       selectedDetails.type === 'percentage' ? 'Route Coverage' :
+                       selectedDetails.type === 'vehicleNumbers' ? 'Total Vehicles' :
+                       selectedDetails.type === 'workshopDeparture' ? 'Total Departures' : 'Total Count'}
                     </div>
                   </div>
                 </div>
@@ -310,6 +334,92 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
                             <p className="mt-1 text-sm text-gray-600">{record.Remarks}</p>
                           </div>
                         )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Vehicle Numbers Details */}
+              {selectedDetails.type === 'vehicleNumbers' && selectedDetails.rawData && selectedDetails.rawData.length > 0 && (
+                <div className="mb-6">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Vehicle Numbers Details ({selectedDetails.rawData.length} records)
+                  </h4>
+                  <div className="space-y-4">
+                    {selectedDetails.rawData.map((record, index) => (
+                      <div key={index} className="p-4 bg-green-50 rounded-lg border border-green-200 hover:shadow-md transition-shadow">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium text-gray-700">Date:</span>
+                              <span className="text-sm text-gray-600">{new Date(record.Date).toLocaleDateString()}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium text-gray-700">Total Vehicles:</span>
+                              <span className="text-sm font-semibold text-green-600">{record.TotalVehicles}</span>
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <div>
+                              <span className="text-sm font-medium text-gray-700">Vehicle Numbers:</span>
+                              <div className="mt-1 p-2 bg-white rounded border text-sm text-gray-600 break-words">
+                                {record.VehicleNumbers || 'Not specified'}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Workshop Departure Details */}
+              {selectedDetails.type === 'workshopDeparture' && selectedDetails.rawData && selectedDetails.rawData.length > 0 && (
+                <div className="mb-6">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Workshop Departure Details ({selectedDetails.rawData.length} vehicles)
+                  </h4>
+                  <div className="space-y-4">
+                    {selectedDetails.rawData.map((record, index) => (
+                      <div key={index} className="p-4 bg-purple-50 rounded-lg border border-purple-200 hover:shadow-md transition-shadow">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium text-gray-700">Date:</span>
+                              <span className="text-sm text-gray-600">{new Date(record.Date).toLocaleDateString()}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium text-gray-700">Ward:</span>
+                              <span className="text-sm text-gray-600">{record.Ward || 'Not specified'}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium text-gray-700">Departure Time:</span>
+                              <span className="text-sm font-semibold text-purple-600">{record.DepartureTime || 'Not specified'}</span>
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <div>
+                              <span className="text-sm font-medium text-gray-700">Permanent Vehicle:</span>
+                              <div className="mt-1 p-2 bg-white rounded border text-sm text-gray-600">
+                                {record.PermanentVehicle || 'Not specified'}
+                              </div>
+                            </div>
+                            <div>
+                              <span className="text-sm font-medium text-gray-700">Spare Vehicle:</span>
+                              <div className="mt-1 p-2 bg-white rounded border text-sm text-gray-600">
+                                {record.SpareVehicle || 'Not specified'}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>

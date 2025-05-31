@@ -67,7 +67,9 @@ const getDatasetLabel = (sheetName) => {
     issuesPost0710: 'Late Arrivals',
     fuelStation: 'Fuel Visits',
     post06AMOpenIssues: 'Late Departures',
-    vehicleBreakdown: 'Breakdowns'
+    vehicleBreakdown: 'Breakdowns',
+    vehicleNumbers: 'Vehicle Numbers',
+    workshopDeparture: 'Workshop Departures'
   };
 
   return labelMapping[sheetName] || 'Vehicle Count';
@@ -115,6 +117,16 @@ const getChartColors = (sheetName) => {
       backgroundColor: 'rgba(220, 38, 38, 0.8)',
       borderColor: 'rgba(220, 38, 38, 1)',
       hoverBackgroundColor: 'rgba(220, 38, 38, 0.9)'
+    },
+    vehicleNumbers: {
+      backgroundColor: 'rgba(16, 185, 129, 0.8)',
+      borderColor: 'rgba(16, 185, 129, 1)',
+      hoverBackgroundColor: 'rgba(16, 185, 129, 0.9)'
+    },
+    workshopDeparture: {
+      backgroundColor: 'rgba(139, 92, 246, 0.8)',
+      borderColor: 'rgba(139, 92, 246, 1)',
+      hoverBackgroundColor: 'rgba(139, 92, 246, 0.9)'
     }
   };
 
@@ -667,7 +679,9 @@ export const CHART_TITLES = {
   issuesPost0710: 'Vehicle Starting after 7:10AM',
   fuelStation: 'Vehicles Going to Fuel Station',
   post06AMOpenIssues: 'Vehicles Leaving Zone After 6PM',
-  vehicleBreakdown: 'Vehicle Breakdown Information'
+  vehicleBreakdown: 'Vehicle Breakdown Information',
+  vehicleNumbers: 'Vehicle Numbers by Zone',
+  workshopDeparture: 'Workshop Departure Schedule'
 };
 
 // Get value field for each sheet type
