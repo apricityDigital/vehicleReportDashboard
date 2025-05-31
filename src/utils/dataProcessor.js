@@ -680,8 +680,8 @@ export const CHART_TITLES = {
   fuelStation: 'Vehicles Going to Fuel Station',
   post06AMOpenIssues: 'Vehicles Leaving Zone After 6PM',
   vehicleBreakdown: 'Vehicle Breakdown Information',
-  vehicleNumbers: 'Vehicle Numbers by Zone',
-  workshopDeparture: 'Workshop Departure Schedule'
+  vehicleNumbers: 'Vehicle Number with Zone Wise Breakdown',
+  workshopDeparture: 'Sphere Vehicles Exit Late from the Workshop'
 };
 
 // Get value field for each sheet type
