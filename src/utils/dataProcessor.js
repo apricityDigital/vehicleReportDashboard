@@ -661,7 +661,7 @@ export const getChartConfig = (title, sheetName) => {
 // Chart titles mapping
 export const CHART_TITLES = {
   onRouteVehicles: 'On Route Vehicles',
-  onBoardAfter3PM: 'Vehicles on Board after 3PM',
+  onBoardAfter3PM: 'Vehicle on Route after 3:00 PM',
   lessThan3Trips: 'Vehicles with Less than 3 Trips',
   glitchPercentage: 'Route Percent Coverage',
   issuesPost0710: 'Vehicle Starting after 7:10AM',

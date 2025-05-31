@@ -46,8 +46,33 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
         // For all other charts, show detailed data from the raw sheet data
         const zoneData = rawData.filter(row => String(row.Zone) === String(label));
 
-        // Special handling for fuel station and timing-related charts
-        if (sheetName === 'fuelStation' || sheetName === 'issuesPost0710' || sheetName === 'post06AMOpenIssues') {
+        // Special handling for route coverage percentage chart
+        if (sheetName === 'glitchPercentage') {
+          // Extract the actual percentage value from the data
+          // For percentage charts, value might be an object {x, y, remarks} or a number
+          let percentageValue = 0;
+
+          if (typeof value === 'object' && value !== null && value.y !== undefined) {
+            // Value is an object from chart data
+            percentageValue = value.y;
+          } else if (typeof value === 'number') {
+            // Value is already a number
+            percentageValue = value;
+          } else if (zoneData.length > 0) {
+            // Fallback to raw data
+            percentageValue = zoneData[0].Percentage || zoneData[0].Count || 0;
+          }
+
+          setSelectedDetails({
+            type: 'percentage',
+            zone: label,
+            title: title,
+            sheetName: sheetName,
+            total: typeof percentageValue === 'number' ? percentageValue : parseFloat(percentageValue) || 0,
+            rawData: zoneData,
+            details: null
+          });
+        } else if (sheetName === 'fuelStation' || sheetName === 'issuesPost0710' || sheetName === 'post06AMOpenIssues') {
           // Extract timing details from the zone data
           let timingDetails = null;
 
@@ -199,13 +224,97 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
                     <p className="text-sm text-blue-600">Zone {selectedDetails.zone} overview</p>
                   </div>
                   <div className="text-right">
-                    <div className="text-3xl font-bold text-blue-600">{selectedDetails.total}</div>
+                    <div className="text-3xl font-bold text-blue-600">
+                      {selectedDetails.type === 'percentage' ? `${selectedDetails.total}%` : selectedDetails.total}
+                    </div>
                     <div className="text-sm text-blue-500">
-                      {selectedDetails.type === 'issue' ? 'Total Issues' : 'Total Count'}
+                      {selectedDetails.type === 'issue' ? 'Total Issues' :
+                       selectedDetails.type === 'percentage' ? 'Route Coverage' : 'Total Count'}
                     </div>
                   </div>
                 </div>
               </div>
+
+              {/* Route Coverage Percentage Details */}
+              {selectedDetails.type === 'percentage' && selectedDetails.rawData && selectedDetails.rawData.length > 0 && (
+                <div className="mb-6">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    Route Coverage Details ({selectedDetails.rawData.length} records)
+                  </h4>
+                  <div className="space-y-4">
+                    {selectedDetails.rawData.map((record, index) => (
+                      <div key={index} className="p-4 bg-purple-50 rounded-lg border border-purple-200 hover:shadow-md transition-shadow">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {/* Main Percentage Display */}
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <span className="text-sm font-medium text-gray-700">Route Coverage</span>
+                              <div className="text-3xl font-bold text-purple-600">
+                                {record.Percentage || record.Count}%
+                              </div>
+                            </div>
+                            <div className="w-16 h-16 relative">
+                              <svg className="w-16 h-16 transform -rotate-90" viewBox="0 0 36 36">
+                                <path
+                                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                  fill="none"
+                                  stroke="#e5e7eb"
+                                  strokeWidth="2"
+                                />
+                                <path
+                                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                  fill="none"
+                                  stroke="#8b5cf6"
+                                  strokeWidth="2"
+                                  strokeDasharray={`${(record.Percentage || record.Count)}, 100`}
+                                />
+                              </svg>
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <span className="text-xs font-semibold text-purple-600">
+                                  {Math.round(record.Percentage || record.Count)}%
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Detailed Breakdown */}
+                          <div className="space-y-2">
+                            {record.SoftwarePercentage !== null && record.SoftwarePercentage !== undefined && (
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium text-gray-700">Software %:</span>
+                                <span className="text-sm font-semibold text-blue-600">{record.SoftwarePercentage}%</span>
+                              </div>
+                            )}
+                            {record.ActualPercentage !== null && record.ActualPercentage !== undefined && (
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium text-gray-700">Actual %:</span>
+                                <span className="text-sm font-semibold text-green-600">{record.ActualPercentage}%</span>
+                              </div>
+                            )}
+                            {record.Date && (
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium text-gray-700">Date:</span>
+                                <span className="text-sm text-gray-600">{new Date(record.Date).toLocaleDateString()}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Remarks Section */}
+                        {record.Remarks && (
+                          <div className="mt-4 pt-4 border-t border-purple-200">
+                            <span className="text-sm font-medium text-gray-700">Remarks:</span>
+                            <p className="mt-1 text-sm text-gray-600">{record.Remarks}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Issue Breakdown (for issue charts) */}
               {selectedDetails.type === 'issue' && selectedDetails.breakdown && (
@@ -434,7 +543,8 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
 
               {/* No Data Message */}
               {((selectedDetails.type === 'general' && (!selectedDetails.rawData || selectedDetails.rawData.length === 0)) ||
-                (selectedDetails.type === 'timing' && (!selectedDetails.details || selectedDetails.details.length === 0) && (!selectedDetails.rawData || selectedDetails.rawData.length === 0))) && (
+                (selectedDetails.type === 'timing' && (!selectedDetails.details || selectedDetails.details.length === 0) && (!selectedDetails.rawData || selectedDetails.rawData.length === 0)) ||
+                (selectedDetails.type === 'percentage' && (!selectedDetails.rawData || selectedDetails.rawData.length === 0))) && (
                 <div className="text-center text-gray-500 py-8">
                   <svg className="w-12 h-12 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
