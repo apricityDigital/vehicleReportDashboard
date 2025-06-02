@@ -83,22 +83,20 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
             rawData: zoneData,
             details: null
           });
-        } else if (sheetName === 'workshopDeparture') {
-          // Special handling for workshop departure chart
-          // Use vehicleDetails from dataset if available, otherwise fall back to rawData filtering
-          let workshopData = zoneData;
-          if (dataset.vehicleDetails && dataset.vehicleDetails[label]) {
-            workshopData = dataset.vehicleDetails[label];
-          }
+        } else if (sheetName === 'sphereWorkshopExit') {
+          // Special handling for workshop exit chart - label is now workshop departure time
+          const workshopTime = label;
+          const zone = value;
 
           setSelectedDetails({
-            type: 'workshopDeparture',
-            zone: label,
+            type: 'workshop',
+            zone: zone,
+            workshopTime: workshopTime,
             title: title,
             sheetName: sheetName,
             total: value,
-            rawData: workshopData,
-            details: null
+            rawData: rawData.filter(row => row['Workshop Departure Time'] === workshopTime),
+            details: dataset.vehicleDetails ? dataset.vehicleDetails[label] : null
           });
         } else if (sheetName === 'fuelStation' || sheetName === 'issuesPost0710' || sheetName === 'post06AMOpenIssues') {
           // Extract timing details from the zone data
@@ -237,7 +235,9 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                     </svg>
                   </div>
-                  Zone {selectedDetails.zone} - {selectedDetails.title}
+                  {selectedDetails.type === 'workshop'
+                    ? `Workshop Time: ${selectedDetails.workshopTime} - Zone ${selectedDetails.zone}`
+                    : `Zone ${selectedDetails.zone} - ${selectedDetails.title}`}
                 </h3>
                 <p className="text-sm text-gray-600 mt-1">Detailed breakdown and information</p>
               </div>
@@ -257,7 +257,11 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
                 <div className="flex items-center justify-between">
                   <div>
                     <h4 className="text-lg font-semibold text-blue-800">Summary</h4>
-                    <p className="text-sm text-blue-600">Zone {selectedDetails.zone} overview</p>
+                    <p className="text-sm text-blue-600">
+                      {selectedDetails.type === 'workshop'
+                        ? `Workshop Time: ${selectedDetails.workshopTime}`
+                        : `Zone ${selectedDetails.zone} overview`}
+                    </p>
                   </div>
                   <div className="text-right">
                     <div className="text-3xl font-bold text-blue-600">
@@ -266,8 +270,7 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
                     <div className="text-sm text-blue-500">
                       {selectedDetails.type === 'issue' ? 'Total Issues' :
                        selectedDetails.type === 'percentage' ? 'Route Coverage' :
-                       selectedDetails.type === 'vehicleNumbers' ? 'Total Vehicles' :
-                       selectedDetails.type === 'workshopDeparture' ? 'Total Departures' : 'Total Count'}
+                       selectedDetails.type === 'vehicleNumbers' ? 'Total Vehicles' : 'Total Count'}
                     </div>
                   </div>
                 </div>
@@ -392,53 +395,9 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
                 </div>
               )}
 
-              {/* Workshop Departure Details */}
-              {selectedDetails.type === 'workshopDeparture' && selectedDetails.rawData && selectedDetails.rawData.length > 0 && (
-                <div className="mb-6">
-                  <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                    <svg className="w-5 h-5 mr-2 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    Workshop Departure Details ({selectedDetails.rawData.length} vehicles)
-                  </h4>
-                  <div className="space-y-4">
-                    {selectedDetails.rawData.map((record, index) => (
-                      <div key={index} className="p-4 bg-purple-50 rounded-lg border border-purple-200 hover:shadow-md transition-shadow">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm font-medium text-gray-700">Date:</span>
-                              <span className="text-sm text-gray-600">{new Date(record.Date).toLocaleDateString()}</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm font-medium text-gray-700">Ward:</span>
-                              <span className="text-sm text-gray-600">{record.Ward || 'Not specified'}</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm font-medium text-gray-700">Departure Time:</span>
-                              <span className="text-sm font-semibold text-purple-600">{record.WorkshopDepartureTime || 'Not specified'}</span>
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <div>
-                              <span className="text-sm font-medium text-gray-700">Permanent Vehicle:</span>
-                              <div className="mt-1 p-2 bg-white rounded border text-sm text-gray-600">
-                                {record.PermanentVehicleNumber || 'Not specified'}
-                              </div>
-                            </div>
-                            <div>
-                              <span className="text-sm font-medium text-gray-700">Spare Vehicle:</span>
-                              <div className="mt-1 p-2 bg-white rounded border text-sm text-gray-600">
-                                {record.SpareVehicleNumber || 'Not specified'}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+
+
+
 
               {/* Issue Breakdown (for issue charts) */}
               {selectedDetails.type === 'issue' && selectedDetails.breakdown && (
@@ -597,6 +556,95 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
                         ))}
                       </tbody>
                     </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Workshop Exit Details */}
+              {selectedDetails.type === 'workshop' && selectedDetails.rawData && selectedDetails.rawData.length > 0 && (
+                <div className="mb-6">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                    </svg>
+                    Workshop Exit Vehicle Details ({selectedDetails.rawData.length} vehicles)
+                  </h4>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {selectedDetails.rawData.map((detail, index) => (
+                      <div key={index} className="p-4 bg-purple-50 rounded-lg border border-purple-200 hover:shadow-md transition-shadow">
+                        <div className="space-y-3">
+                          {/* Vehicle Information Header */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center">
+                              <svg className="w-4 h-4 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              <span className="font-semibold text-gray-800">
+                                Vehicle #{index + 1}
+                              </span>
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {detail.Date && new Date(detail.Date).toLocaleDateString()}
+                            </div>
+                          </div>
+
+                          {/* Vehicle Details Grid */}
+                          <div className="grid grid-cols-1 gap-2 text-sm">
+                            {detail.Ward && (
+                              <div className="flex items-center">
+                                <svg className="w-3 h-3 mr-2 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                <span className="font-medium text-gray-700">Ward:</span>
+                                <span className="ml-2 text-purple-600 font-semibold">{detail.Ward}</span>
+                              </div>
+                            )}
+
+                            {detail['Permanent Vehicle Number'] && (
+                              <div className="flex items-center">
+                                <svg className="w-3 h-3 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                <span className="font-medium text-gray-700">Permanent Vehicle:</span>
+                                <span className="ml-2 text-blue-600 font-semibold">{detail['Permanent Vehicle Number']}</span>
+                              </div>
+                            )}
+
+                            {detail['Spare Vehicle Number'] && (
+                              <div className="flex items-center">
+                                <svg className="w-3 h-3 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                <span className="font-medium text-gray-700">Spare Vehicle:</span>
+                                <span className="ml-2 text-green-600 font-semibold">{detail['Spare Vehicle Number']}</span>
+                              </div>
+                            )}
+
+                            {detail['Workshop Departure Time'] && (
+                              <div className="flex items-center">
+                                <svg className="w-3 h-3 mr-2 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span className="font-medium text-gray-700">Workshop Departure:</span>
+                                <span className="ml-2 text-orange-600 font-semibold">{detail['Workshop Departure Time']}</span>
+                              </div>
+                            )}
+
+                            {detail.Zone && (
+                              <div className="flex items-center">
+                                <svg className="w-3 h-3 mr-2 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                <span className="font-medium text-gray-700">Zone:</span>
+                                <span className="ml-2 text-indigo-600 font-semibold">{detail.Zone}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}

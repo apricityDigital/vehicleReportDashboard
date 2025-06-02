@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import BarChart from './BarChart';
+import LineChart from './LineChart';
 import Filters from './Filters';
 import Header from './Header';
 import AdminPanel from './admin/AdminPanel';
@@ -76,7 +77,7 @@ const Dashboard = () => {
 
   const renderLessThan3TripsChart = (sheetName) => {
     const sheetData = allData[sheetName] || [];
-    const filteredData = filterData(sheetData, selectedDate, selectedZone, tripCountFilter);
+    const filteredData = filterData(sheetData, selectedDate, selectedZone, tripCountFilter, sheetName);
     const valueField = getValueField(sheetName);
     const chartData = processDataForChart(filteredData, valueField, 'Zone', sheetName, tripCountFilter);
     const chartOptions = getChartConfig(CHART_TITLES[sheetName], sheetName);
@@ -223,23 +224,27 @@ const Dashboard = () => {
     const isLessThan3TripsChart = sheetName === 'lessThan3Trips';
     const currentTripCountFilter = isLessThan3TripsChart ? tripCountFilter : null;
 
-    const filteredData = filterData(sheetData, selectedDate, selectedZone, currentTripCountFilter);
+    const filteredData = filterData(sheetData, selectedDate, selectedZone, currentTripCountFilter, sheetName);
     const valueField = getValueField(sheetName);
     const chartData = processDataForChart(filteredData, valueField, 'Zone', sheetName, currentTripCountFilter);
     const chartOptions = getChartConfig(CHART_TITLES[sheetName], sheetName);
 
-    // Debug logging for chart data processing
-    if (sheetName === 'onBoardAfter3PM') {
-      console.log(`\n=== ${sheetName} CHART PROCESSING ===`);
-      console.log('Raw sheet data:', sheetData);
-      console.log('Selected date:', selectedDate);
-      console.log('Selected zone:', selectedZone);
-      console.log('Filtered data:', filteredData);
-      console.log('Value field:', valueField);
-      console.log('Final chart data:', chartData);
-      console.log('Chart labels:', chartData.labels);
-      console.log('Chart values:', chartData.datasets[0]?.data);
-      console.log(`=== END ${sheetName} CHART PROCESSING ===\n`);
+
+
+    // Use LineChart for workshop chart, BarChart for others
+    if (sheetName === 'sphereWorkshopExit') {
+      return (
+        <LineChart
+          key={`${sheetName}-${selectedDate}-${selectedZone}-${currentTripCountFilter}`}
+          data={chartData}
+          options={chartOptions}
+          title={CHART_TITLES[sheetName]}
+          loading={loading}
+          error={error}
+          sheetName={sheetName}
+          rawData={filteredData}
+        />
+      );
     }
 
     return (
@@ -287,7 +292,6 @@ const Dashboard = () => {
       )}
 
       <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8">
-
         {/* Filters */}
         <Filters
           selectedDate={selectedDate}

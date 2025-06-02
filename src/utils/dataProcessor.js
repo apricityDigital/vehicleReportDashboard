@@ -19,12 +19,19 @@ const normalizeDate = (dateStr) => {
 };
 
 // Filter data by date, zone, and trip count (for lessThan3Trips sheet)
-export const filterData = (data, selectedDate, selectedZone, tripCountFilter = null) => {
+export const filterData = (data, selectedDate, selectedZone, tripCountFilter = null, sheetName = '') => {
   if (!data || data.length === 0) {
     return [];
   }
 
   const filtered = data.filter(row => {
+    // For workshop charts, be more lenient with date filtering to ensure data shows
+    if (sheetName === 'sphereWorkshopExit') {
+      // Only filter by zone if specified, ignore date filtering for now to troubleshoot
+      const zoneMatch = !selectedZone || String(row.Zone) === String(selectedZone);
+      return zoneMatch;
+    }
+
     // Normalize dates for comparison
     const rowDate = normalizeDate(row.Date);
     const filterDate = normalizeDate(selectedDate);
@@ -69,7 +76,7 @@ const getDatasetLabel = (sheetName) => {
     post06AMOpenIssues: 'Late Departures',
     vehicleBreakdown: 'Breakdowns',
     vehicleNumbers: 'Vehicle Numbers',
-    workshopDeparture: 'Workshop Departures'
+    sphereWorkshopExit: 'Workshop Exit Vehicles'
   };
 
   return labelMapping[sheetName] || 'Vehicle Count';
@@ -123,10 +130,10 @@ const getChartColors = (sheetName) => {
       borderColor: 'rgba(16, 185, 129, 1)',
       hoverBackgroundColor: 'rgba(16, 185, 129, 0.9)'
     },
-    workshopDeparture: {
-      backgroundColor: 'rgba(139, 92, 246, 0.8)',
-      borderColor: 'rgba(139, 92, 246, 1)',
-      hoverBackgroundColor: 'rgba(139, 92, 246, 0.9)'
+    sphereWorkshopExit: {
+      backgroundColor: 'rgba(147, 51, 234, 0.8)',
+      borderColor: 'rgba(147, 51, 234, 1)',
+      hoverBackgroundColor: 'rgba(147, 51, 234, 0.9)'
     }
   };
 
@@ -157,7 +164,7 @@ export const processDataForChart = (data, valueField, labelField = 'Zone', sheet
   const isPercentageChart = sheetName === 'glitchPercentage';
   const isLessThan3TripsChart = sheetName === 'lessThan3Trips';
   const isIssueChart = ['issuesPost0710', 'vehicleBreakdown', 'fuelStation', 'post06AMOpenIssues'].includes(sheetName);
-  const isWorkshopDepartureChart = sheetName === 'workshopDeparture';
+  const isWorkshopChart = sheetName === 'sphereWorkshopExit';
 
   if (isLessThan3TripsChart && tripCountFilter && tripCountFilter !== 'all') {
     // Special handling for lessThan3Trips with specific trip count filter
@@ -296,56 +303,60 @@ export const processDataForChart = (data, valueField, labelField = 'Zone', sheet
         vehicleDetails: vehicleDetails // Store vehicle details for breakdown charts
       }]
     };
-  } else if (isWorkshopDepartureChart) {
-    // Special handling for workshop departure data to preserve vehicle details
-    const groupedData = {};
+  } else if (isWorkshopChart) {
+    // Special handling for workshop charts - line chart showing zone analysis over time
+    // Sort data by workshop departure time for proper line progression
+    const sortedData = data.sort((a, b) => {
+      const timeA = a['Workshop Departure Time'] || '';
+      const timeB = b['Workshop Departure Time'] || '';
+      return timeA.localeCompare(timeB);
+    });
+
+    const workshopTimeLabels = [];
+    const zoneValues = [];
     const vehicleDetails = {};
 
-    data.forEach(item => {
-      const label = item[labelField];
-      const value = parseFloat(item[valueField]) || 0;
+    sortedData.forEach((item, index) => {
+      const workshopTime = item['Workshop Departure Time'] || `Record ${index + 1}`;
+      const zone = item.Zone || 'Unknown';
 
       // Filter out negative zones
-      const zoneNumber = Number(label);
+      const zoneNumber = Number(zone);
       if (!isNaN(zoneNumber) && zoneNumber <= 0) {
         return; // Skip negative zones
       }
 
-      if (groupedData[label]) {
-        groupedData[label] += value;
-      } else {
-        groupedData[label] = value;
-      }
+      workshopTimeLabels.push(workshopTime);
+      zoneValues.push(Number(zone));
 
-      // Store vehicle details for workshop departure charts
-      if (!vehicleDetails[label]) {
-        vehicleDetails[label] = [];
-      }
-      vehicleDetails[label].push(item);
+      // Store vehicle details for each time point
+      vehicleDetails[workshopTime] = [{
+        ward: item.Ward,
+        permanentVehicleNumber: item['Permanent Vehicle Number'],
+        spareVehicleNumber: item['Spare Vehicle Number'],
+        workshopDepartureTime: item['Workshop Departure Time'],
+        zone: item.Zone,
+        date: item.Date
+      }];
     });
 
-    const labels = Object.keys(groupedData).sort((a, b) => {
-      const numA = parseInt(a);
-      const numB = parseInt(b);
-      if (!isNaN(numA) && !isNaN(numB)) {
-        return numA - numB;
-      }
-      return a.localeCompare(b);
-    });
-
-    const values = labels.map(label => groupedData[label]);
     const colors = getChartColors(sheetName);
 
     return {
-      labels,
+      labels: workshopTimeLabels,
       datasets: [{
         label: getDatasetLabel(sheetName),
-        data: values,
-        ...colors,
-        borderWidth: 2,
-        borderRadius: 4,
-        borderSkipped: false,
-        vehicleDetails: vehicleDetails // Store vehicle details for workshop departure charts
+        data: zoneValues,
+        borderColor: colors.borderColor,
+        backgroundColor: colors.backgroundColor,
+        pointBackgroundColor: colors.borderColor,
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
+        pointRadius: 6,
+        pointHoverRadius: 8,
+        fill: false,
+        tension: 0.4, // Smooth line curves
+        vehicleDetails: vehicleDetails // Store vehicle details for workshop charts
       }]
     };
   } else if (isPercentageChart) {
@@ -453,13 +464,7 @@ export const processDataForChart = (data, valueField, labelField = 'Zone', sheet
   const groupedData = {};
   const groupedRemarks = {};
 
-  // Debug logging for onBoardAfter3PM
-  if (sheetName === 'onBoardAfter3PM') {
-    console.log('\n=== PROCESSING onBoardAfter3PM DATA ===');
-    console.log('Input data:', data);
-    console.log('Value field:', valueField);
-    console.log('Label field:', labelField);
-  }
+
 
   data.forEach((row) => {
     const label = row[labelField] || 'Unknown';
@@ -474,11 +479,6 @@ export const processDataForChart = (data, valueField, labelField = 'Zone', sheet
     const value = parseInt(rawValue) || 0;
     const remarks = row.Remarks || '';
 
-    // Debug logging for onBoardAfter3PM
-    if (sheetName === 'onBoardAfter3PM') {
-      console.log(`Processing row - Zone: ${label}, Raw Value: ${rawValue}, Parsed Value: ${value}`);
-    }
-
     if (groupedData[label]) {
       groupedData[label] += value;
       // Combine remarks
@@ -490,12 +490,6 @@ export const processDataForChart = (data, valueField, labelField = 'Zone', sheet
       groupedRemarks[label] = remarks;
     }
   });
-
-  // Debug logging for onBoardAfter3PM
-  if (sheetName === 'onBoardAfter3PM') {
-    console.log('Grouped data:', groupedData);
-    console.log('=== END PROCESSING onBoardAfter3PM DATA ===\n');
-  }
 
   const labels = Object.keys(groupedData).sort((a, b) => {
     // Sort numerically if possible, otherwise alphabetically
@@ -533,6 +527,14 @@ const getAxisLabels = (sheetName) => {
     };
   }
 
+  // Special case for workshop charts
+  if (sheetName === 'sphereWorkshopExit') {
+    return {
+      xLabel: 'Workshop Departure Time',
+      yLabel: 'Zones'
+    };
+  }
+
   // All other charts use standard vehicle count labels
   return {
     xLabel: 'Zones',
@@ -545,6 +547,7 @@ export const getChartConfig = (title, sheetName) => {
   const axisLabels = getAxisLabels(sheetName);
   const isPercentageChart = sheetName === 'glitchPercentage';
   const isIssueChart = ['issuesPost0710', 'vehicleBreakdown', 'fuelStation', 'post06AMOpenIssues'].includes(sheetName);
+  const isWorkshopChart = sheetName === 'sphereWorkshopExit';
 
   return {
     responsive: true,
@@ -593,6 +596,9 @@ export const getChartConfig = (title, sheetName) => {
         padding: 12,
         callbacks: {
           title: function(context) {
+            if (isWorkshopChart) {
+              return `Workshop Time: ${context[0].label}`;
+            }
             return `Zone ${context[0].label}`;
           },
           label: function(context) {
@@ -601,6 +607,9 @@ export const getChartConfig = (title, sheetName) => {
 
             if (isPercentageChart) {
               return `${datasetLabel}: ${value.toFixed(1)}%`;
+            }
+            if (isWorkshopChart) {
+              return `Zone: ${value}`;
             }
             return `${datasetLabel}: ${value}`;
           },
@@ -734,11 +743,11 @@ export const CHART_TITLES = {
   post06AMOpenIssues: 'Vehicles Leaving Zone After 6PM',
   vehicleBreakdown: 'Vehicle Breakdown Information',
   vehicleNumbers: 'Vehicle Number with Zone Wise Breakdown',
-  workshopDeparture: 'Sphere Vehicles Exit Late from the Workshop'
+  sphereWorkshopExit: 'Sphere Vehicles Exit Late for the Workshop'
 };
 
 // Get value field for each sheet type
-export const getValueField = (sheetName) => {
+export const getValueField = () => {
   // All sheets now use 'Count' as the standardized value field
   return 'Count';
 };

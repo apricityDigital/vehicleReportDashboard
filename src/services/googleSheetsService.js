@@ -9,10 +9,10 @@ const SHEET_GIDS = {
   glitchPercentage: '1163492617',
   issuesPost0710: '203626227',
   fuelStation: '431461673',
-  post06AMOpenIssues: '291765477',
+  post06AMOpenIssues: '1903869379',
   vehicleBreakdown: '213524255',
   vehicleNumbers: '510665731',
-  workshopDeparture: '1903869379'
+  sphereWorkshopExit: '291765477'
 };
 
 // Convert Google Sheets to CSV URL
@@ -20,34 +20,52 @@ const getSheetCSVUrl = (gid) => {
   return `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=${gid}`;
 };
 
-// Parse CSV data with proper handling of quoted fields
+// Enhanced CSV parser with better handling of malformed Google Sheets data
 const parseCSV = (csvText) => {
+  console.log('🔍 CSV Parser - Input length:', csvText.length);
+  console.log('🔍 CSV Parser - Contains newlines:', csvText.includes('\n'));
+  console.log('🔍 CSV Parser - Contains dates:', csvText.includes('2025-'));
+
   // Handle different line break formats and fix malformed CSV
   let normalizedText = csvText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
   // Special handling for Google Sheets CSV that comes as one line with space-separated rows
   if (!normalizedText.includes('\n') && normalizedText.includes('2025-')) {
-    // For workshop departure data, we need to handle the specific format
-    // The pattern is: header row followed by data rows separated by spaces
+    console.log('⚠️  Detected single-line CSV format - applying fix');
 
-    // First, identify where the header ends and data begins
-    // Look for the pattern where header ends and first date begins
-    const headerMatch = normalizedText.match(/^(.*?)\s+(\d{4}-\d{2}-\d{2}.*)/);
-    if (headerMatch) {
-      const header = headerMatch[1].trim();
-      const dataSection = headerMatch[2];
+    // Handle the specific format where header and data are separated
 
-      // Split data section by date pattern (but keep the dates)
-      const dataRows = dataSection.split(/(?=\d{4}-\d{2}-\d{2})/).filter(row => row.trim());
+    // More robust pattern matching for header extraction
+    // Look for the last comma before the first date
+    const firstDateIndex = normalizedText.search(/\d{4}-\d{2}-\d{2}/);
+    if (firstDateIndex > 0) {
+      // Find the last comma before the first date
+      const headerPart = normalizedText.substring(0, firstDateIndex);
+      const lastCommaIndex = headerPart.lastIndexOf(',');
 
-      // Reconstruct with proper line breaks
-      normalizedText = header + '\n' + dataRows.join('\n');
-    } else {
-      // Fallback: Split by date pattern to separate rows
-      normalizedText = normalizedText.replace(/(\d{4}-\d{2}-\d{2})/g, '\n$1');
-      // Remove the first empty line
-      normalizedText = normalizedText.replace(/^\n/, '');
+      if (lastCommaIndex > 0) {
+        // Split at the last comma before the date
+        const header = normalizedText.substring(0, lastCommaIndex + 1).trim();
+        const dataSection = normalizedText.substring(lastCommaIndex + 1).trim();
+
+        console.log('📋 Extracted header:', header);
+        console.log('📊 Data section preview:', dataSection.substring(0, 100) + '...');
+
+        // Split data section by date pattern (but keep the dates)
+        const dataRows = dataSection.split(/(?=\d{4}-\d{2}-\d{2})/).filter(row => row.trim());
+
+        console.log('📊 Found data rows:', dataRows.length);
+
+        // Reconstruct with proper line breaks
+        normalizedText = header + '\n' + dataRows.join('\n');
+      } else {
+        // Last resort: Split by date pattern
+        normalizedText = normalizedText.replace(/(\d{4}-\d{2}-\d{2})/g, '\n$1');
+        normalizedText = normalizedText.replace(/^\n/, '');
+      }
     }
+
+    console.log('✅ Fixed CSV format - new line count:', normalizedText.split('\n').length);
   }
 
   const lines = normalizedText.split('\n');
@@ -492,42 +510,23 @@ const transformVehicleNumbersData = (data) => {
 
   return longData;
 };
-
-// Transform workshop departure data to standardized format
-const transformWorkshopDepartureData = (data) => {
-  const longData = [];
-
-  data.forEach(row => {
-    const date = normalizeDate(row.Date);
-    let zone = row.Zone;
-    const ward = row.Ward || '';
-
-    // Try different possible field names for vehicle numbers and departure time
-    const permanentVehicle = row['Permanent Vehicle Number'] || row['PermanentVehicleNumber'] || '';
-    const spareVehicle = row['Spare Vehicle Number'] || row['SpareVehicleNumber'] || '';
-    const departureTime = row['Workshop Departure Time'] || row['WorkshopDepartureTime'] || '';
-
-    // Skip empty rows
-    if (!date || !zone) return;
-
-    // Ensure zone is a string for consistency
-    zone = String(zone);
-
-    longData.push({
-      Date: date,
-      Zone: zone,
-      Count: 1, // Each row represents one vehicle departure
-      Ward: ward,
-      PermanentVehicleNumber: permanentVehicle,
-      SpareVehicleNumber: spareVehicle,
-      WorkshopDepartureTime: departureTime
-    });
-  });
-
-  return longData;
+// Transform sphere workshop exit data - keep raw data as is
+const transformSphereWorkshopExitData = (data) => {
+  return data.map(row => ({
+    Date: normalizeDate(row.Date),
+    Zone: row.Zone,
+    Ward: row.Ward || '',
+    'Permanent Vehicle Number': row['Permanent Vehicle Number'] || '',
+    'Spare Vehicle Number': row['Spare Vehicle Number'] || '',
+    'Workshop Departure Time': row['Workshop Departure Time'] || ''
+  })).filter(row => row.Date && row.Zone); // Only filter out completely empty rows
 };
 
-// Fetch data from a specific sheet
+
+
+
+
+// Enhanced fetch function for all sheets
 export const fetchSheetData = async (sheetName) => {
   try {
     const gid = SHEET_GIDS[sheetName];
@@ -543,6 +542,9 @@ export const fetchSheetData = async (sheetName) => {
     }
 
     const csvText = await response.text();
+
+
+
     let parsedData = parseCSV(csvText);
 
     // Check data format and transform accordingly
@@ -598,9 +600,9 @@ export const fetchSheetData = async (sheetName) => {
       } else if (sheetName === 'vehicleNumbers') {
         // Special handling for vehicle numbers data
         parsedData = transformVehicleNumbersData(parsedData);
-      } else if (sheetName === 'workshopDeparture') {
-        // Special handling for workshop departure data
-        parsedData = transformWorkshopDepartureData(parsedData);
+      } else if (sheetName === 'sphereWorkshopExit') {
+        // Special handling for sphere workshop exit data
+        parsedData = transformSphereWorkshopExitData(parsedData);
       } else if (sheetName === 'onRouteVehicles') {
         // Standardize the onRouteVehicles sheet to use 'Count' instead of 'On Route Vehicle Count'
         parsedData = parsedData.map(row => ({
@@ -619,13 +621,7 @@ export const fetchSheetData = async (sheetName) => {
       }
     }
 
-    // Debug logging for all sheets to troubleshoot data issues
-    console.log(`\n=== ${sheetName.toUpperCase()} DATA ===`);
-    console.log(`${sheetName} - Total rows:`, parsedData.length);
-    console.log(`${sheetName} - Headers:`, parsedData.length > 0 ? Object.keys(parsedData[0]) : 'No data');
-    console.log(`${sheetName} - Sample data (first 5 rows):`, parsedData.slice(0, 5));
-    console.log(`${sheetName} - All data:`, parsedData);
-    console.log(`=== END ${sheetName.toUpperCase()} DATA ===\n`);
+
 
     return parsedData;
   } catch (error) {
