@@ -2,6 +2,177 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Custom ICCC Header Styles */
+@layer components {
+  .iccc-header {
+    background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 25%, #3730a3 50%, #4338ca 75%, #6366f1 100%);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .iccc-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") repeat;
+    pointer-events: none;
+  }
+
+  .logo-container {
+    transition: all 0.3s ease;
+  }
+
+  .logo-container:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  }
+
+  .iccc-title {
+    background: linear-gradient(135deg, #ffffff 0%, #e0e7ff 50%, #c7d2fe 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .status-indicator {
+    animation: pulse-glow 2s infinite;
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% {
+      box-shadow: 0 0 5px rgba(34, 197, 94, 0.5);
+    }
+    50% {
+      box-shadow: 0 0 20px rgba(34, 197, 94, 0.8), 0 0 30px rgba(34, 197, 94, 0.4);
+    }
+  }
+
+  .nav-breadcrumb {
+    backdrop-filter: blur(10px);
+    background: rgba(30, 64, 175, 0.3);
+  }
+
+  .time-display {
+    font-family: 'Courier New', monospace;
+    letter-spacing: 0.5px;
+  }
+
+  /* IMC Logo Highlighting Effects */
+  .imc-text-glow {
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.5), 0 0 20px rgba(59, 130, 246, 0.3);
+    animation: imc-text-pulse 3s ease-in-out infinite;
+  }
+
+  @keyframes imc-text-pulse {
+    0%, 100% {
+      text-shadow: 0 0 10px rgba(255, 255, 255, 0.5), 0 0 20px rgba(59, 130, 246, 0.3);
+    }
+    50% {
+      text-shadow: 0 0 15px rgba(255, 255, 255, 0.8), 0 0 30px rgba(59, 130, 246, 0.5), 0 0 40px rgba(99, 102, 241, 0.3);
+    }
+  }
+
+  .imc-logo-enhanced {
+    position: relative;
+    animation: imc-logo-glow 4s ease-in-out infinite;
+  }
+
+  @keyframes imc-logo-glow {
+    0%, 100% {
+      filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.4));
+    }
+    50% {
+      filter: drop-shadow(0 0 16px rgba(59, 130, 246, 0.6)) drop-shadow(0 0 24px rgba(99, 102, 241, 0.3));
+    }
+  }
+
+  .imc-divider {
+    animation: imc-divider-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes imc-divider-pulse {
+    0%, 100% {
+      opacity: 0.7;
+      transform: scaleY(1);
+    }
+    50% {
+      opacity: 1;
+      transform: scaleY(1.1);
+    }
+  }
+
+  /* Mobile-First Responsive Enhancements */
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+
+  /* Ensure minimum touch target size on mobile */
+  @media (max-width: 640px) {
+    button,
+    .touch-manipulation,
+    input[type="button"],
+    input[type="submit"],
+    input[type="reset"] {
+      min-height: 44px;
+      min-width: 44px;
+    }
+
+    /* Improve form input sizing on mobile */
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="tel"],
+    select,
+    textarea {
+      font-size: 16px; /* Prevents zoom on iOS */
+      min-height: 44px;
+    }
+
+    /* Better spacing for mobile cards */
+    .mobile-card-spacing {
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    /* Improved mobile modal */
+    .mobile-modal {
+      margin: 8px;
+      max-height: calc(100vh - 16px);
+    }
+  }
+
+  /* Tablet optimizations */
+  @media (min-width: 641px) and (max-width: 1024px) {
+    .tablet-optimized {
+      padding: 16px 20px;
+    }
+  }
+
+  /* Ensure proper scrolling on mobile */
+  .mobile-scroll {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  /* Better focus states for accessibility */
+  .focus-enhanced:focus {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+  }
+
+  /* Prevent text selection on buttons */
+  button {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+}
+
 @layer base {
   body {
     @apply bg-gray-50 font-sans;

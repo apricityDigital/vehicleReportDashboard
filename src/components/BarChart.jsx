@@ -85,13 +85,19 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
           });
         } else if (sheetName === 'workshopDeparture') {
           // Special handling for workshop departure chart
+          // Use vehicleDetails from dataset if available, otherwise fall back to rawData filtering
+          let workshopData = zoneData;
+          if (dataset.vehicleDetails && dataset.vehicleDetails[label]) {
+            workshopData = dataset.vehicleDetails[label];
+          }
+
           setSelectedDetails({
             type: 'workshopDeparture',
             zone: label,
             title: title,
             sheetName: sheetName,
             total: value,
-            rawData: zoneData,
+            rawData: workshopData,
             details: null
           });
         } else if (sheetName === 'fuelStation' || sheetName === 'issuesPost0710' || sheetName === 'post06AMOpenIssues') {
@@ -410,20 +416,20 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
                             </div>
                             <div className="flex items-center justify-between">
                               <span className="text-sm font-medium text-gray-700">Departure Time:</span>
-                              <span className="text-sm font-semibold text-purple-600">{record.DepartureTime || 'Not specified'}</span>
+                              <span className="text-sm font-semibold text-purple-600">{record.WorkshopDepartureTime || 'Not specified'}</span>
                             </div>
                           </div>
                           <div className="space-y-2">
                             <div>
                               <span className="text-sm font-medium text-gray-700">Permanent Vehicle:</span>
                               <div className="mt-1 p-2 bg-white rounded border text-sm text-gray-600">
-                                {record.PermanentVehicle || 'Not specified'}
+                                {record.PermanentVehicleNumber || 'Not specified'}
                               </div>
                             </div>
                             <div>
                               <span className="text-sm font-medium text-gray-700">Spare Vehicle:</span>
                               <div className="mt-1 p-2 bg-white rounded border text-sm text-gray-600">
-                                {record.SpareVehicle || 'Not specified'}
+                                {record.SpareVehicleNumber || 'Not specified'}
                               </div>
                             </div>
                           </div>

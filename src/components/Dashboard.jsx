@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import BarChart from './BarChart';
 import Filters from './Filters';
+import Header from './Header';
+import AdminPanel from './admin/AdminPanel';
+import { useAuth } from '../contexts/AuthContext';
 import {
   fetchAllSheetsData,
   getUniqueZones,
@@ -16,6 +19,7 @@ import {
 } from '../utils/dataProcessor';
 
 const Dashboard = () => {
+  const { user, logout } = useAuth();
   const [allData, setAllData] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -24,6 +28,17 @@ const Dashboard = () => {
   const [tripCountFilter, setTripCountFilter] = useState('all');
   const [availableDates, setAvailableDates] = useState([]);
   const [availableZones, setAvailableZones] = useState([]);
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
+
+  // Authentication handlers
+  const handleLogin = () => {
+    // This will be handled by the AuthPage component
+    console.log('Login should be handled by AuthPage');
+  };
+
+  const handleLogout = async () => {
+    await logout();
+  };
 
   const loadData = async () => {
     try {
@@ -253,30 +268,25 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
-      <div className="container mx-auto px-4 py-8">
-        {/* Enhanced Header */}
-        <div className="mb-8 text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full mb-4 shadow-lg">
-            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-          </div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-3">
-            Daily Vehicle Report Dashboard
-          </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Monitor vehicle performance across different zones and dates with real-time analytics
-          </p>
-          <div className="mt-4 flex items-center justify-center space-x-2 text-sm text-gray-500">
-            <div className="flex items-center">
-              <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
-              Live Data
-            </div>
-            <span>•</span>
-            <div>Last Updated: {new Date().toLocaleTimeString()}</div>
-          </div>
-        </div>
+    <div className="min-h-screen bg-gray-50">
+      {/* ICCC Header */}
+      <Header
+        availableZones={availableZones}
+        user={user}
+        onLogin={handleLogin}
+        onLogout={handleLogout}
+        onShowAdminPanel={() => setShowAdminPanel(true)}
+      />
+
+      {/* Admin Panel Modal */}
+      {showAdminPanel && user?.role === 'admin' && (
+        <AdminPanel
+          currentUser={user}
+          onClose={() => setShowAdminPanel(false)}
+        />
+      )}
+
+      <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8">
 
         {/* Filters */}
         <Filters
@@ -308,7 +318,7 @@ const Dashboard = () => {
         )}
 
         {/* Enhanced Charts Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 gap-8 auto-rows-fr">
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 auto-rows-fr">
           {Object.keys(CHART_TITLES).map(sheetName => (
             <div key={sheetName} className="flex">
               {sheetName === 'lessThan3Trips' ? (

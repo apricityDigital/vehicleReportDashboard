@@ -157,6 +157,7 @@ export const processDataForChart = (data, valueField, labelField = 'Zone', sheet
   const isPercentageChart = sheetName === 'glitchPercentage';
   const isLessThan3TripsChart = sheetName === 'lessThan3Trips';
   const isIssueChart = ['issuesPost0710', 'vehicleBreakdown', 'fuelStation', 'post06AMOpenIssues'].includes(sheetName);
+  const isWorkshopDepartureChart = sheetName === 'workshopDeparture';
 
   if (isLessThan3TripsChart && tripCountFilter && tripCountFilter !== 'all') {
     // Special handling for lessThan3Trips with specific trip count filter
@@ -293,6 +294,58 @@ export const processDataForChart = (data, valueField, labelField = 'Zone', sheet
         borderSkipped: false,
         issueBreakdowns: issueBreakdowns, // Store breakdown data for tooltips
         vehicleDetails: vehicleDetails // Store vehicle details for breakdown charts
+      }]
+    };
+  } else if (isWorkshopDepartureChart) {
+    // Special handling for workshop departure data to preserve vehicle details
+    const groupedData = {};
+    const vehicleDetails = {};
+
+    data.forEach(item => {
+      const label = item[labelField];
+      const value = parseFloat(item[valueField]) || 0;
+
+      // Filter out negative zones
+      const zoneNumber = Number(label);
+      if (!isNaN(zoneNumber) && zoneNumber <= 0) {
+        return; // Skip negative zones
+      }
+
+      if (groupedData[label]) {
+        groupedData[label] += value;
+      } else {
+        groupedData[label] = value;
+      }
+
+      // Store vehicle details for workshop departure charts
+      if (!vehicleDetails[label]) {
+        vehicleDetails[label] = [];
+      }
+      vehicleDetails[label].push(item);
+    });
+
+    const labels = Object.keys(groupedData).sort((a, b) => {
+      const numA = parseInt(a);
+      const numB = parseInt(b);
+      if (!isNaN(numA) && !isNaN(numB)) {
+        return numA - numB;
+      }
+      return a.localeCompare(b);
+    });
+
+    const values = labels.map(label => groupedData[label]);
+    const colors = getChartColors(sheetName);
+
+    return {
+      labels,
+      datasets: [{
+        label: getDatasetLabel(sheetName),
+        data: values,
+        ...colors,
+        borderWidth: 2,
+        borderRadius: 4,
+        borderSkipped: false,
+        vehicleDetails: vehicleDetails // Store vehicle details for workshop departure charts
       }]
     };
   } else if (isPercentageChart) {

@@ -22,8 +22,38 @@ const getSheetCSVUrl = (gid) => {
 
 // Parse CSV data with proper handling of quoted fields
 const parseCSV = (csvText) => {
-  const lines = csvText.split('\n');
+  // Handle different line break formats and fix malformed CSV
+  let normalizedText = csvText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+  // Special handling for Google Sheets CSV that comes as one line with space-separated rows
+  if (!normalizedText.includes('\n') && normalizedText.includes('2025-')) {
+    // For workshop departure data, we need to handle the specific format
+    // The pattern is: header row followed by data rows separated by spaces
+
+    // First, identify where the header ends and data begins
+    // Look for the pattern where header ends and first date begins
+    const headerMatch = normalizedText.match(/^(.*?)\s+(\d{4}-\d{2}-\d{2}.*)/);
+    if (headerMatch) {
+      const header = headerMatch[1].trim();
+      const dataSection = headerMatch[2];
+
+      // Split data section by date pattern (but keep the dates)
+      const dataRows = dataSection.split(/(?=\d{4}-\d{2}-\d{2})/).filter(row => row.trim());
+
+      // Reconstruct with proper line breaks
+      normalizedText = header + '\n' + dataRows.join('\n');
+    } else {
+      // Fallback: Split by date pattern to separate rows
+      normalizedText = normalizedText.replace(/(\d{4}-\d{2}-\d{2})/g, '\n$1');
+      // Remove the first empty line
+      normalizedText = normalizedText.replace(/^\n/, '');
+    }
+  }
+
+  const lines = normalizedText.split('\n');
   if (lines.length === 0) return [];
+
+
 
   // Parse CSV line with proper quote handling
   const parseCSVLine = (line) => {
@@ -471,9 +501,11 @@ const transformWorkshopDepartureData = (data) => {
     const date = normalizeDate(row.Date);
     let zone = row.Zone;
     const ward = row.Ward || '';
-    const permanentVehicle = row['Permanent Vehicle Number'] || '';
-    const spareVehicle = row['Spare Vehicle Number'] || '';
-    const departureTime = row['Workshop Departure Time'] || '';
+
+    // Try different possible field names for vehicle numbers and departure time
+    const permanentVehicle = row['Permanent Vehicle Number'] || row['PermanentVehicleNumber'] || '';
+    const spareVehicle = row['Spare Vehicle Number'] || row['SpareVehicleNumber'] || '';
+    const departureTime = row['Workshop Departure Time'] || row['WorkshopDepartureTime'] || '';
 
     // Skip empty rows
     if (!date || !zone) return;
@@ -486,9 +518,9 @@ const transformWorkshopDepartureData = (data) => {
       Zone: zone,
       Count: 1, // Each row represents one vehicle departure
       Ward: ward,
-      PermanentVehicle: permanentVehicle,
-      SpareVehicle: spareVehicle,
-      DepartureTime: departureTime
+      PermanentVehicleNumber: permanentVehicle,
+      SpareVehicleNumber: spareVehicle,
+      WorkshopDepartureTime: departureTime
     });
   });
 
