@@ -5,9 +5,20 @@ const DataManagement = ({ currentUser }) => {
   const [loading, setLoading] = useState(false);
   const [exportData, setExportData] = useState(null);
   const [dataSourceConfig, setDataSourceConfig] = useState({
-    googleSheetsUrl: localStorage.getItem('googleSheetsUrl') || '',
+    dataSources: JSON.parse(localStorage.getItem('dataSources') || JSON.stringify([
+      {
+        id: 1,
+        name: 'Primary Source',
+        url: '',
+        priority: 1,
+        status: 'active',
+        description: 'Main live data source'
+      }
+    ])),
     refreshInterval: localStorage.getItem('refreshInterval') || '300000', // 5 minutes
-    autoRefresh: localStorage.getItem('autoRefresh') === 'true'
+    autoRefresh: localStorage.getItem('autoRefresh') === 'true',
+    enableFailover: localStorage.getItem('enableFailover') === 'true',
+    failoverTimeout: localStorage.getItem('failoverTimeout') || '10000' // 10 seconds
   });
   const [backupStatus, setBackupStatus] = useState({
     lastBackup: localStorage.getItem('lastBackup') || null,
@@ -66,11 +77,92 @@ const DataManagement = ({ currentUser }) => {
     }
   };
 
+  const addDataSource = () => {
+    const newSource = {
+      id: Date.now(),
+      name: `Backup Source ${dataSourceConfig.dataSources.length}`,
+      url: '',
+      priority: dataSourceConfig.dataSources.length + 1,
+      status: 'inactive',
+      description: 'Backup data source'
+    };
+
+    setDataSourceConfig(prev => ({
+      ...prev,
+      dataSources: [...prev.dataSources, newSource]
+    }));
+  };
+
+  const removeDataSource = (id) => {
+    if (dataSourceConfig.dataSources.length <= 1) {
+      alert('Cannot remove the last data source!');
+      return;
+    }
+
+    setDataSourceConfig(prev => ({
+      ...prev,
+      dataSources: prev.dataSources.filter(source => source.id !== id)
+    }));
+  };
+
+  const updateDataSource = (id, field, value) => {
+    setDataSourceConfig(prev => ({
+      ...prev,
+      dataSources: prev.dataSources.map(source =>
+        source.id === id ? { ...source, [field]: value } : source
+      )
+    }));
+  };
+
+  const moveDataSource = (id, direction) => {
+    const sources = [...dataSourceConfig.dataSources];
+    const index = sources.findIndex(s => s.id === id);
+
+    if (direction === 'up' && index > 0) {
+      [sources[index], sources[index - 1]] = [sources[index - 1], sources[index]];
+    } else if (direction === 'down' && index < sources.length - 1) {
+      [sources[index], sources[index + 1]] = [sources[index + 1], sources[index]];
+    }
+
+    // Update priorities
+    sources.forEach((source, idx) => {
+      source.priority = idx + 1;
+    });
+
+    setDataSourceConfig(prev => ({ ...prev, dataSources: sources }));
+  };
+
+  const testDataSource = async (url) => {
+    if (!url) {
+      alert('Please enter a URL first');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await fetch(url);
+      if (response.ok) {
+        alert('✅ Data source is accessible!');
+        return true;
+      } else {
+        alert('❌ Data source is not accessible');
+        return false;
+      }
+    } catch (error) {
+      alert('❌ Error testing data source: ' + error.message);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleDataSourceUpdate = () => {
-    localStorage.setItem('googleSheetsUrl', dataSourceConfig.googleSheetsUrl);
+    localStorage.setItem('dataSources', JSON.stringify(dataSourceConfig.dataSources));
     localStorage.setItem('refreshInterval', dataSourceConfig.refreshInterval);
     localStorage.setItem('autoRefresh', dataSourceConfig.autoRefresh.toString());
-    alert('Data source configuration updated successfully!');
+    localStorage.setItem('enableFailover', dataSourceConfig.enableFailover.toString());
+    localStorage.setItem('failoverTimeout', dataSourceConfig.failoverTimeout);
+    alert('Multi-source data configuration updated successfully!');
   };
 
   const handleBackupSettings = () => {
@@ -170,34 +262,65 @@ const DataManagement = ({ currentUser }) => {
           )}
         </div>
 
-        {/* Data Source Configuration */}
+        {/* Multi-Source Data Configuration */}
         <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Data Source Configuration</h3>
-          <p className="text-gray-600 mb-6">Configure Google Sheets data source and refresh settings.</p>
-          
-          <div className="space-y-4">
+          <div className="flex items-center justify-between mb-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Google Sheets URL
-              </label>
-              <input
-                type="url"
-                value={dataSourceConfig.googleSheetsUrl}
-                onChange={(e) => setDataSourceConfig(prev => ({ ...prev, googleSheetsUrl: e.target.value }))}
-                placeholder="https://docs.google.com/spreadsheets/d/..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
+              <h3 className="text-lg font-semibold text-gray-900">Multi-Source Data Configuration</h3>
+              <p className="text-gray-600 text-sm">Configure multiple Google Sheets with automatic failover</p>
             </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <button
+              onClick={addDataSource}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm flex items-center"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              Add Source
+            </button>
+          </div>
+
+          {/* Failover Settings */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <h4 className="font-medium text-blue-900 mb-3">Failover Settings</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="enableFailover"
+                  checked={dataSourceConfig.enableFailover}
+                  onChange={(e) => setDataSourceConfig(prev => ({ ...prev, enableFailover: e.target.checked }))}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label htmlFor="enableFailover" className="ml-2 block text-sm text-blue-800">
+                  Enable Automatic Failover
+                </label>
+              </div>
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Refresh Interval (ms)
+                <label className="block text-sm font-medium text-blue-800 mb-1">
+                  Failover Timeout
+                </label>
+                <select
+                  value={dataSourceConfig.failoverTimeout}
+                  onChange={(e) => setDataSourceConfig(prev => ({ ...prev, failoverTimeout: e.target.value }))}
+                  className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                >
+                  <option value="5000">5 seconds</option>
+                  <option value="10000">10 seconds</option>
+                  <option value="15000">15 seconds</option>
+                  <option value="30000">30 seconds</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-blue-800 mb-1">
+                  Refresh Interval
                 </label>
                 <select
                   value={dataSourceConfig.refreshInterval}
                   onChange={(e) => setDataSourceConfig(prev => ({ ...prev, refreshInterval: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                 >
                   <option value="60000">1 minute</option>
                   <option value="300000">5 minutes</option>
@@ -206,7 +329,108 @@ const DataManagement = ({ currentUser }) => {
                   <option value="3600000">1 hour</option>
                 </select>
               </div>
-              
+            </div>
+          </div>
+
+          {/* Data Sources List */}
+          <div className="space-y-4 mb-6">
+            {dataSourceConfig.dataSources.map((source, index) => (
+              <div key={source.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center">
+                    <div className={`w-3 h-3 rounded-full mr-3 ${source.status === 'active' ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                    <span className="font-medium text-gray-900">Priority {source.priority}</span>
+                    {index === 0 && <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">Primary</span>}
+                    {index > 0 && <span className="ml-2 px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded-full">Backup</span>}
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => moveDataSource(source.id, 'up')}
+                      disabled={index === 0}
+                      className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-50"
+                      title="Move Up"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => moveDataSource(source.id, 'down')}
+                      disabled={index === dataSourceConfig.dataSources.length - 1}
+                      className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-50"
+                      title="Move Down"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => removeDataSource(source.id)}
+                      disabled={dataSourceConfig.dataSources.length <= 1}
+                      className="p-1 text-red-400 hover:text-red-600 disabled:opacity-50"
+                      title="Remove Source"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Source Name
+                    </label>
+                    <input
+                      type="text"
+                      value={source.name}
+                      onChange={(e) => updateDataSource(source.id, 'name', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Description
+                    </label>
+                    <input
+                      type="text"
+                      value={source.description}
+                      onChange={(e) => updateDataSource(source.id, 'description', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-3">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Google Sheets URL
+                  </label>
+                  <div className="flex space-x-2">
+                    <input
+                      type="url"
+                      value={source.url}
+                      onChange={(e) => updateDataSource(source.id, 'url', e.target.value)}
+                      placeholder="https://docs.google.com/spreadsheets/d/..."
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                    />
+                    <button
+                      onClick={() => testDataSource(source.url)}
+                      disabled={loading || !source.url}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm"
+                    >
+                      Test
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Global Settings */}
+          <div className="border-t pt-4">
+            <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <input
                   type="checkbox"
@@ -219,14 +443,14 @@ const DataManagement = ({ currentUser }) => {
                   Enable Auto Refresh
                 </label>
               </div>
+
+              <button
+                onClick={handleDataSourceUpdate}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Save Configuration
+              </button>
             </div>
-            
-            <button
-              onClick={handleDataSourceUpdate}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              Update Configuration
-            </button>
           </div>
         </div>
 
