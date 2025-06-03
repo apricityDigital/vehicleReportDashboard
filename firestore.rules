@@ -1,0 +1,79 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // TEMPORARY: Allow all reads and writes for testing
+    // TODO: Replace with proper security rules after testing
+    match /{document=**} {
+      allow read, write: if true;
+    }
+
+    // Commented out the restrictive rules for now
+    /*
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'approved';
+    }
+
+    // Helper function to check if user is approved
+    function isApproved() {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'approved';
+    }
+
+    // Users collection rules
+    match /users/{userId} {
+      // Allow users to read their own document
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+
+      // Allow users to create their own document during signup
+      allow create: if isAuthenticated() &&
+        request.auth.uid == userId &&
+        request.resource.data.uid == userId &&
+        request.resource.data.status == 'pending';
+
+      // Allow users to update their own non-critical fields
+      allow update: if isAuthenticated() &&
+        request.auth.uid == userId &&
+        // Only allow updating specific fields
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'phone', 'department', 'updatedAt']);
+
+      // Admin permissions
+      // Allow admins to read all user documents
+      allow read: if isAdmin();
+
+      // Allow admins to update user status (approve/reject)
+      allow update: if isAdmin() &&
+        // Only allow updating specific admin fields
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'approvedBy', 'approvedAt', 'rejectedBy', 'rejectedAt', 'updatedAt', 'role'
+        ]);
+
+      // Allow admins to delete users (if needed)
+      allow delete: if isAdmin();
+    }
+    */
+    
+    // Additional collections can be added here with appropriate rules
+    // For example, if you have logs or other admin-only collections:
+    
+    // Admin logs collection (optional)
+    match /admin_logs/{logId} {
+      allow read, write: if isAdmin();
+    }
+    
+    // System settings collection (optional)
+    match /settings/{settingId} {
+      allow read: if isApproved();
+      allow write: if isAdmin();
+    }
+  }
+}

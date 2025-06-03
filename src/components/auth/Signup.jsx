@@ -58,10 +58,15 @@ const Signup = ({ onSuccess, onSwitchToLogin }) => {
     }
 
     try {
+      console.log('🚀 Starting signup process from component...', { email: formData.email });
+
       const result = await signUpUser(formData);
-      
+
+      console.log('📝 Signup result:', result);
+
       if (result.success) {
         setSuccess(result.message);
+        console.log('✅ Signup successful, resetting form...');
         // Reset form
         setFormData({
           name: '',
@@ -73,11 +78,14 @@ const Signup = ({ onSuccess, onSwitchToLogin }) => {
           role: USER_ROLES.VIEWER
         });
       } else {
+        console.log('❌ Signup failed:', result.message);
         setError(result.message);
       }
     } catch (error) {
+      console.error('❌ Signup error in component:', error);
       setError('An unexpected error occurred. Please try again.');
     } finally {
+      console.log('🏁 Signup process completed, setting loading to false');
       setLoading(false);
     }
   };
@@ -128,6 +136,8 @@ const Signup = ({ onSuccess, onSwitchToLogin }) => {
               </div>
             </div>
           )}
+
+
 
           <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
             <div>

@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Workflow Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        button { padding: 10px 15px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Admin Approval Workflow Test</h1>
+    
+    <div class="test-section info">
+        <h3>Instructions</h3>
+        <p>This page helps test the admin approval workflow. Open browser console to see detailed logs.</p>
+        <p><strong>Note:</strong> This page needs to be served from the same domain as your app for Firebase to work.</p>
+    </div>
+
+    <div class="test-section">
+        <h3>1. Firebase Configuration Test</h3>
+        <button onclick="testFirebaseConfig()">Test Firebase Config</button>
+        <div id="config-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>2. Database Connection Test</h3>
+        <button onclick="testDatabaseConnection()">Test Database Connection</button>
+        <div id="db-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>3. Check Existing Users</h3>
+        <button onclick="checkExistingUsers()">Check Users in Database</button>
+        <div id="users-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>4. Test Admin Query</h3>
+        <button onclick="testAdminQuery()">Test Pending Users Query</button>
+        <div id="admin-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>5. Create Test User</h3>
+        <button onclick="createTestUser()">Create Test Pending User</button>
+        <div id="test-user-result"></div>
+    </div>
+
+    <script type="module">
+        // Import Firebase modules
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getAuth } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        import { 
+            getFirestore, 
+            collection, 
+            query, 
+            where, 
+            getDocs, 
+            doc, 
+            setDoc,
+            serverTimestamp 
+        } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        // Firebase configuration (same as in your app)
+        const firebaseConfig = {
+            apiKey: "AIzaSyAA8WeKYlk_pZB_T-A0g2kosP8ixqf0GYU",
+            authDomain: "vehicles-f1f63.firebaseapp.com",
+            projectId: "vehicles-f1f63",
+            storageBucket: "vehicles-f1f63.firebasestorage.app",
+            messagingSenderId: "887499842648",
+            appId: "1:887499842648:web:fe7df601e4041f1544d62d",
+            measurementId: "G-HLXCDWXRY3"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Make functions available globally
+        window.testFirebaseConfig = function() {
+            const result = document.getElementById('config-result');
+            try {
+                const config = {
+                    hasApp: !!app,
+                    hasAuth: !!auth,
+                    hasDb: !!db,
+                    projectId: firebaseConfig.projectId
+                };
+                
+                result.innerHTML = `<pre class="success">${JSON.stringify(config, null, 2)}</pre>`;
+                console.log('✅ Firebase config test passed', config);
+            } catch (error) {
+                result.innerHTML = `<pre class="error">Error: ${error.message}</pre>`;
+                console.error('❌ Firebase config test failed', error);
+            }
+        };
+
+        window.testDatabaseConnection = async function() {
+            const result = document.getElementById('db-result');
+            try {
+                result.innerHTML = '<p>Testing database connection...</p>';
+                
+                // Try to access the users collection
+                const usersRef = collection(db, 'users');
+                const snapshot = await getDocs(usersRef);
+                
+                const connectionInfo = {
+                    connected: true,
+                    totalUsers: snapshot.size,
+                    timestamp: new Date().toISOString()
+                };
+                
+                result.innerHTML = `<pre class="success">${JSON.stringify(connectionInfo, null, 2)}</pre>`;
+                console.log('✅ Database connection test passed', connectionInfo);
+            } catch (error) {
+                result.innerHTML = `<pre class="error">Error: ${error.message}</pre>`;
+                console.error('❌ Database connection test failed', error);
+            }
+        };
+
+        window.checkExistingUsers = async function() {
+            const result = document.getElementById('users-result');
+            try {
+                result.innerHTML = '<p>Checking existing users...</p>';
+                
+                const usersRef = collection(db, 'users');
+                const snapshot = await getDocs(usersRef);
+                
+                const users = [];
+                snapshot.forEach((doc) => {
+                    const userData = doc.data();
+                    users.push({
+                        id: doc.id,
+                        email: userData.email,
+                        name: userData.name,
+                        role: userData.role,
+                        status: userData.status
+                    });
+                });
+                
+                const userInfo = {
+                    totalUsers: users.length,
+                    users: users,
+                    adminUsers: users.filter(u => u.role === 'admin'),
+                    pendingUsers: users.filter(u => u.status === 'pending')
+                };
+                
+                result.innerHTML = `<pre class="info">${JSON.stringify(userInfo, null, 2)}</pre>`;
+                console.log('✅ Users check completed', userInfo);
+            } catch (error) {
+                result.innerHTML = `<pre class="error">Error: ${error.message}</pre>`;
+                console.error('❌ Users check failed', error);
+            }
+        };
+
+        window.testAdminQuery = async function() {
+            const result = document.getElementById('admin-result');
+            try {
+                result.innerHTML = '<p>Testing admin query for pending users...</p>';
+                
+                // Test the exact query used in the admin panel
+                const q = query(
+                    collection(db, 'users'),
+                    where('status', '==', 'pending')
+                );
+                
+                const querySnapshot = await getDocs(q);
+                const pendingUsers = [];
+                
+                querySnapshot.forEach((doc) => {
+                    pendingUsers.push({ id: doc.id, ...doc.data() });
+                });
+                
+                const queryResult = {
+                    querySuccessful: true,
+                    pendingUsersCount: pendingUsers.length,
+                    pendingUsers: pendingUsers.map(u => ({
+                        id: u.id,
+                        email: u.email,
+                        name: u.name,
+                        status: u.status,
+                        createdAt: u.createdAt ? 'Has timestamp' : 'No timestamp'
+                    }))
+                };
+                
+                result.innerHTML = `<pre class="success">${JSON.stringify(queryResult, null, 2)}</pre>`;
+                console.log('✅ Admin query test passed', queryResult);
+            } catch (error) {
+                result.innerHTML = `<pre class="error">Error: ${error.message}</pre>`;
+                console.error('❌ Admin query test failed', error);
+            }
+        };
+
+        window.createTestUser = async function() {
+            const result = document.getElementById('test-user-result');
+            try {
+                result.innerHTML = '<p>Creating test pending user...</p>';
+                
+                const testUserId = 'test-user-' + Date.now();
+                const testUserData = {
+                    uid: testUserId,
+                    email: `test-${Date.now()}@example.com`,
+                    name: 'Test Pending User',
+                    department: 'Test Department',
+                    phone: '1234567890',
+                    role: 'viewer',
+                    status: 'pending',
+                    createdAt: serverTimestamp(),
+                    updatedAt: serverTimestamp(),
+                    approvedBy: null,
+                    approvedAt: null
+                };
+                
+                await setDoc(doc(db, 'users', testUserId), testUserData);
+                
+                const createResult = {
+                    success: true,
+                    testUserId: testUserId,
+                    testUserEmail: testUserData.email,
+                    message: 'Test user created successfully'
+                };
+                
+                result.innerHTML = `<pre class="success">${JSON.stringify(createResult, null, 2)}</pre>`;
+                console.log('✅ Test user created', createResult);
+            } catch (error) {
+                result.innerHTML = `<pre class="error">Error: ${error.message}</pre>`;
+                console.error('❌ Test user creation failed', error);
+            }
+        };
+    </script>
+</body>
+</html>

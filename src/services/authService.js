@@ -36,20 +36,27 @@ export const USER_ROLES = {
 
 // Sign up new user (requires admin approval)
 export const signUpUser = async (userData) => {
+  console.log('Starting user signup process...', { email: userData.email, name: userData.name });
+
   try {
     const { email, password, name, department, phone, role = USER_ROLES.VIEWER } = userData;
-    
+
+    console.log('Step 1: Creating Firebase Auth user...');
     // Create user account
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
-    
+    console.log('✅ Firebase Auth user created:', user.uid);
+
+    console.log('Step 2: Updating user profile...');
     // Update user profile
     await updateProfile(user, {
       displayName: name
     });
-    
+    console.log('✅ User profile updated');
+
+    console.log('Step 3: Creating Firestore user document...');
     // Create user document in Firestore
-    await setDoc(doc(db, 'users', user.uid), {
+    const userDocData = {
       uid: user.uid,
       email: email,
       name: name,
@@ -61,11 +68,17 @@ export const signUpUser = async (userData) => {
       updatedAt: serverTimestamp(),
       approvedBy: null,
       approvedAt: null
-    });
-    
+    };
+
+    await setDoc(doc(db, 'users', user.uid), userDocData);
+    console.log('✅ Firestore user document created');
+
+    console.log('Step 4: Signing out user...');
     // Sign out the user immediately (they need approval first)
     await signOut(auth);
-    
+    console.log('✅ User signed out');
+
+    console.log('✅ Signup process completed successfully');
     return {
       success: true,
       message: 'Account created successfully. Please wait for admin approval.',
@@ -77,10 +90,29 @@ export const signUpUser = async (userData) => {
       }
     };
   } catch (error) {
-    console.error('Error signing up:', error);
+    console.error('❌ Error during signup process:', error);
+    console.error('Error details:', {
+      code: error.code,
+      message: error.message,
+      stack: error.stack
+    });
+
+    // Provide more specific error messages
+    let userMessage = error.message;
+    if (error.code === 'auth/email-already-in-use') {
+      userMessage = 'An account with this email already exists. Please use a different email or try signing in.';
+    } else if (error.code === 'auth/weak-password') {
+      userMessage = 'Password is too weak. Please use a stronger password.';
+    } else if (error.code === 'auth/invalid-email') {
+      userMessage = 'Invalid email address. Please check your email and try again.';
+    } else if (error.code === 'auth/network-request-failed') {
+      userMessage = 'Network error. Please check your internet connection and try again.';
+    }
+
     return {
       success: false,
-      message: error.message
+      message: userMessage,
+      errorCode: error.code
     };
   }
 };
@@ -182,20 +214,53 @@ export const getCurrentUserData = async (uid) => {
 // Admin functions
 export const getPendingUsers = async () => {
   try {
-    const q = query(
-      collection(db, 'users'),
-      where('status', '==', USER_STATUS.PENDING),
-      orderBy('createdAt', 'desc')
-    );
-    const querySnapshot = await getDocs(q);
-    const users = [];
-    querySnapshot.forEach((doc) => {
-      users.push({ id: doc.id, ...doc.data() });
-    });
-    return users;
+    console.log('Fetching pending users...');
+
+    // First try with orderBy - this requires a composite index
+    try {
+      const q = query(
+        collection(db, 'users'),
+        where('status', '==', USER_STATUS.PENDING),
+        orderBy('createdAt', 'desc')
+      );
+      const querySnapshot = await getDocs(q);
+      const users = [];
+      querySnapshot.forEach((doc) => {
+        users.push({ id: doc.id, ...doc.data() });
+      });
+      console.log('Found pending users with orderBy:', users.length);
+      return users;
+    } catch (indexError) {
+      console.warn('Composite index not available, falling back to simple query:', indexError);
+
+      // Fallback: Simple query without orderBy
+      const q = query(
+        collection(db, 'users'),
+        where('status', '==', USER_STATUS.PENDING)
+      );
+      const querySnapshot = await getDocs(q);
+      const users = [];
+      querySnapshot.forEach((doc) => {
+        users.push({ id: doc.id, ...doc.data() });
+      });
+
+      // Sort manually by createdAt
+      users.sort((a, b) => {
+        if (!a.createdAt || !b.createdAt) return 0;
+        return b.createdAt.seconds - a.createdAt.seconds;
+      });
+
+      console.log('Found pending users with simple query:', users.length);
+      return users;
+    }
   } catch (error) {
     console.error('Error getting pending users:', error);
-    return [];
+    console.error('Error details:', {
+      code: error.code,
+      message: error.message,
+      stack: error.stack
+    });
+    throw error; // Re-throw to let the component handle it
   }
 };
 
@@ -235,3 +300,5 @@ export const rejectUser = async (userId, adminId) => {
 export const onAuthStateChange = (callback) => {
   return onAuthStateChanged(auth, callback);
 };
+
+

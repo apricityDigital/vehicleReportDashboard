@@ -24,4 +24,17 @@ export const auth = getAuth(app);
 // Initialize Cloud Firestore and get a reference to the service
 export const db = getFirestore(app);
 
+// Add connection timeout settings for better error handling
+auth.settings = {
+  appVerificationDisabledForTesting: false
+};
+
+// Log Firebase initialization
+console.log('🔥 Firebase initialized:', {
+  projectId: firebaseConfig.projectId,
+  authDomain: firebaseConfig.authDomain,
+  hasAuth: !!auth,
+  hasDb: !!db
+});
+
 export default app;

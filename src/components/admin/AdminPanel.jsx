@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { getPendingUsers, approveUser, rejectUser, USER_STATUS } from '../../services/authService';
+import { getPendingUsers, approveUser, rejectUser, USER_STATUS, testFirebaseConnection } from '../../services/authService';
 
 const AdminPanel = ({ currentUser, onClose }) => {
   const [pendingUsers, setPendingUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState({});
+  const [error, setError] = useState(null);
+  const [debugInfo, setDebugInfo] = useState(null);
+  const [testResults, setTestResults] = useState(null);
 
   useEffect(() => {
     loadPendingUsers();
@@ -12,11 +15,29 @@ const AdminPanel = ({ currentUser, onClose }) => {
 
   const loadPendingUsers = async () => {
     setLoading(true);
+    setError(null);
+    setDebugInfo(null);
+
     try {
+      console.log('AdminPanel: Loading pending users...');
+      console.log('Current user:', currentUser);
+
       const users = await getPendingUsers();
+      console.log('AdminPanel: Received users:', users);
+
       setPendingUsers(users);
+      setDebugInfo({
+        userCount: users.length,
+        currentUserRole: currentUser?.role,
+        timestamp: new Date().toISOString()
+      });
     } catch (error) {
-      console.error('Error loading pending users:', error);
+      console.error('AdminPanel: Error loading pending users:', error);
+      setError({
+        message: error.message || 'Failed to load pending users',
+        code: error.code || 'unknown',
+        details: error.toString()
+      });
     } finally {
       setLoading(false);
     }
@@ -50,6 +71,13 @@ const AdminPanel = ({ currentUser, onClose }) => {
     } finally {
       setActionLoading({ ...actionLoading, [userId]: null });
     }
+  };
+
+  const runConnectionTest = async () => {
+    console.log('Running Firebase connection test...');
+    const results = await testFirebaseConnection();
+    setTestResults(results);
+    console.log('Test results:', results);
   };
 
   const formatDate = (timestamp) => {
@@ -86,10 +114,58 @@ const AdminPanel = ({ currentUser, onClose }) => {
 
         {/* Content */}
         <div className="p-3 sm:p-4 lg:p-6 overflow-y-auto max-h-[calc(95vh-80px)] sm:max-h-[calc(90vh-120px)]">
+          {/* Error Display */}
+          {error && (
+            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-start">
+                <svg className="w-5 h-5 text-red-500 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div className="flex-1">
+                  <h4 className="text-red-800 font-medium">Error Loading Pending Users</h4>
+                  <p className="text-red-700 text-sm mt-1">{error.message}</p>
+                  {error.code && (
+                    <p className="text-red-600 text-xs mt-1">Error Code: {error.code}</p>
+                  )}
+                  <button
+                    onClick={loadPendingUsers}
+                    className="mt-2 text-red-600 hover:text-red-700 text-sm font-medium underline"
+                  >
+                    Try Again
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Debug Info (only in development) */}
+          {debugInfo && process.env.NODE_ENV === 'development' && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs">
+              <h4 className="font-medium text-blue-800 mb-1">Debug Info:</h4>
+              <pre className="text-blue-700">{JSON.stringify(debugInfo, null, 2)}</pre>
+            </div>
+          )}
+
+          {/* Test Results (only in development) */}
+          {testResults && process.env.NODE_ENV === 'development' && (
+            <div className="mb-4 p-3 bg-purple-50 border border-purple-200 rounded-lg text-xs">
+              <h4 className="font-medium text-purple-800 mb-1">Firebase Connection Test:</h4>
+              <pre className="text-purple-700">{JSON.stringify(testResults, null, 2)}</pre>
+            </div>
+          )}
+
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
               <span className="ml-3 text-gray-600">Loading pending requests...</span>
+            </div>
+          ) : error ? (
+            <div className="text-center py-12">
+              <svg className="w-16 h-16 text-red-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Failed to Load Requests</h3>
+              <p className="text-gray-600">There was an error loading pending user requests.</p>
             </div>
           ) : pendingUsers.length === 0 ? (
             <div className="text-center py-12">
@@ -105,12 +181,22 @@ const AdminPanel = ({ currentUser, onClose }) => {
                 <h3 className="text-base sm:text-lg font-semibold text-gray-900">
                   Pending Access Requests ({pendingUsers.length})
                 </h3>
-                <button
-                  onClick={loadPendingUsers}
-                  className="text-blue-600 hover:text-blue-700 text-sm font-medium self-start sm:self-auto touch-manipulation"
-                >
-                  Refresh
-                </button>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={loadPendingUsers}
+                    className="text-blue-600 hover:text-blue-700 text-sm font-medium touch-manipulation"
+                  >
+                    Refresh
+                  </button>
+                  {process.env.NODE_ENV === 'development' && (
+                    <button
+                      onClick={runConnectionTest}
+                      className="text-purple-600 hover:text-purple-700 text-sm font-medium touch-manipulation"
+                    >
+                      Test Connection
+                    </button>
+                  )}
+                </div>
               </div>
 
               {pendingUsers.map((user) => (
