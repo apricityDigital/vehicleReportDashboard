@@ -5,14 +5,15 @@ import {
   onAuthStateChanged,
   updateProfile
 } from 'firebase/auth';
-import { 
-  doc, 
-  setDoc, 
-  getDoc, 
-  updateDoc, 
-  collection, 
-  query, 
-  where, 
+import {
+  doc,
+  setDoc,
+  getDoc,
+  updateDoc,
+  deleteDoc,
+  collection,
+  query,
+  where,
   getDocs,
   orderBy,
   serverTimestamp
@@ -293,6 +294,261 @@ export const rejectUser = async (userId, adminId) => {
   } catch (error) {
     console.error('Error rejecting user:', error);
     return { success: false, message: error.message };
+  }
+};
+
+// Get all users (admin only)
+export const getAllUsers = async () => {
+  try {
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, orderBy('createdAt', 'desc'));
+    const querySnapshot = await getDocs(q);
+
+    const users = [];
+    querySnapshot.forEach((doc) => {
+      users.push({
+        id: doc.id,
+        ...doc.data()
+      });
+    });
+
+    return users;
+  } catch (error) {
+    console.error('Error getting all users:', error);
+    throw error;
+  }
+};
+
+// Get users by status
+export const getUsersByStatus = async (status) => {
+  try {
+    const usersRef = collection(db, 'users');
+    const q = query(
+      usersRef,
+      where('status', '==', status),
+      orderBy('createdAt', 'desc')
+    );
+    const querySnapshot = await getDocs(q);
+
+    const users = [];
+    querySnapshot.forEach((doc) => {
+      users.push({
+        id: doc.id,
+        ...doc.data()
+      });
+    });
+
+    return users;
+  } catch (error) {
+    console.error('Error getting users by status:', error);
+    throw error;
+  }
+};
+
+// Update user role (admin only)
+export const updateUserRole = async (userId, newRole, adminId) => {
+  try {
+    await updateDoc(doc(db, 'users', userId), {
+      role: newRole,
+      updatedAt: serverTimestamp(),
+      roleUpdatedBy: adminId,
+      roleUpdatedAt: serverTimestamp()
+    });
+    return { success: true, message: 'User role updated successfully' };
+  } catch (error) {
+    console.error('Error updating user role:', error);
+    return { success: false, message: error.message };
+  }
+};
+
+// Suspend user (admin only)
+export const suspendUser = async (userId, adminId, reason = '') => {
+  try {
+    await updateDoc(doc(db, 'users', userId), {
+      status: USER_STATUS.SUSPENDED,
+      suspendedBy: adminId,
+      suspendedAt: serverTimestamp(),
+      suspensionReason: reason,
+      updatedAt: serverTimestamp()
+    });
+    return { success: true, message: 'User suspended successfully' };
+  } catch (error) {
+    console.error('Error suspending user:', error);
+    return { success: false, message: error.message };
+  }
+};
+
+// Reactivate user (admin only)
+export const reactivateUser = async (userId, adminId) => {
+  try {
+    await updateDoc(doc(db, 'users', userId), {
+      status: USER_STATUS.APPROVED,
+      reactivatedBy: adminId,
+      reactivatedAt: serverTimestamp(),
+      suspensionReason: null,
+      updatedAt: serverTimestamp()
+    });
+    return { success: true, message: 'User reactivated successfully' };
+  } catch (error) {
+    console.error('Error reactivating user:', error);
+    return { success: false, message: error.message };
+  }
+};
+
+// Delete user (admin only) - DANGEROUS OPERATION
+export const deleteUser = async (userId, adminId, reason = '') => {
+  try {
+    // First, get the user data for logging purposes
+    const userDoc = await getDoc(doc(db, 'users', userId));
+    if (!userDoc.exists()) {
+      return { success: false, message: 'User not found' };
+    }
+
+    const userData = userDoc.data();
+
+    // Log the deletion for audit purposes
+    console.warn('🚨 USER DELETION:', {
+      deletedUserId: userId,
+      deletedUserEmail: userData.email,
+      deletedUserName: userData.name,
+      deletedBy: adminId,
+      reason: reason,
+      timestamp: new Date().toISOString()
+    });
+
+    // Create a deletion log entry (optional - for audit trail)
+    try {
+      await setDoc(doc(db, 'deletedUsers', userId), {
+        ...userData,
+        deletedBy: adminId,
+        deletedAt: serverTimestamp(),
+        deletionReason: reason,
+        originalId: userId
+      });
+    } catch (logError) {
+      console.warn('Could not create deletion log:', logError);
+      // Continue with deletion even if logging fails
+    }
+
+    // Delete the user document from Firestore
+    await deleteDoc(doc(db, 'users', userId));
+
+    return {
+      success: true,
+      message: 'User deleted successfully',
+      deletedUser: {
+        id: userId,
+        email: userData.email,
+        name: userData.name
+      }
+    };
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    return { success: false, message: error.message };
+  }
+};
+
+// Bulk delete users (admin only) - EXTREMELY DANGEROUS
+export const bulkDeleteUsers = async (userIds, adminId, reason = '') => {
+  try {
+    const results = [];
+    const errors = [];
+
+    for (const userId of userIds) {
+      try {
+        const result = await deleteUser(userId, adminId, reason);
+        if (result.success) {
+          results.push(result.deletedUser);
+        } else {
+          errors.push({ userId, error: result.message });
+        }
+      } catch (error) {
+        errors.push({ userId, error: error.message });
+      }
+    }
+
+    return {
+      success: errors.length === 0,
+      message: `Deleted ${results.length} users${errors.length > 0 ? `, ${errors.length} failed` : ''}`,
+      deletedUsers: results,
+      errors: errors
+    };
+  } catch (error) {
+    console.error('Error bulk deleting users:', error);
+    return { success: false, message: error.message };
+  }
+};
+
+// Get user activity logs (placeholder for future implementation)
+export const getUserActivityLogs = async (userId, limit = 50) => {
+  try {
+    // This would query an activity logs collection
+    // For now, return empty array as placeholder
+    return [];
+  } catch (error) {
+    console.error('Error getting user activity logs:', error);
+    throw error;
+  }
+};
+
+// Bulk approve users
+export const bulkApproveUsers = async (userIds, adminId) => {
+  try {
+    const results = [];
+    for (const userId of userIds) {
+      const result = await approveUser(userId, adminId);
+      results.push({ userId, ...result });
+    }
+    return { success: true, results };
+  } catch (error) {
+    console.error('Error bulk approving users:', error);
+    return { success: false, message: error.message };
+  }
+};
+
+// Bulk reject users
+export const bulkRejectUsers = async (userIds, adminId) => {
+  try {
+    const results = [];
+    for (const userId of userIds) {
+      const result = await rejectUser(userId, adminId);
+      results.push({ userId, ...result });
+    }
+    return { success: true, results };
+  } catch (error) {
+    console.error('Error bulk rejecting users:', error);
+    return { success: false, message: error.message };
+  }
+};
+
+// Search users
+export const searchUsers = async (searchTerm) => {
+  try {
+    const usersRef = collection(db, 'users');
+    const querySnapshot = await getDocs(usersRef);
+
+    const users = [];
+    querySnapshot.forEach((doc) => {
+      const userData = { id: doc.id, ...doc.data() };
+
+      // Simple client-side search (for better performance, implement server-side search)
+      const searchFields = [
+        userData.name?.toLowerCase() || '',
+        userData.email?.toLowerCase() || '',
+        userData.department?.toLowerCase() || '',
+        userData.role?.toLowerCase() || ''
+      ];
+
+      const searchLower = searchTerm.toLowerCase();
+      if (searchFields.some(field => field.includes(searchLower))) {
+        users.push(userData);
+      }
+    });
+
+    return users;
+  } catch (error) {
+    console.error('Error searching users:', error);
+    throw error;
   }
 };
 

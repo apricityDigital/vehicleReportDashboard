@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -9,6 +9,7 @@ import {
   Legend,
 } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
+import { getCurrentTheme, getThemedChartColors } from '../utils/themeUtils';
 
 ChartJS.register(
   CategoryScale,
@@ -21,7 +22,25 @@ ChartJS.register(
 
 const BarChart = ({ data, options, title, loading = false, error = null, sheetName = '', rawData = [] }) => {
   const [selectedDetails, setSelectedDetails] = useState(null);
+  const [isLoading, setIsLoading] = useState(loading);
+  const [hoveredBar, setHoveredBar] = useState(null);
+  const chartRef = useRef(null);
+  const [themeColors, setThemeColors] = useState(getThemedChartColors());
   const isIssueChart = ['issuesPost0710', 'vehicleBreakdown', 'fuelStation', 'post06AMOpenIssues'].includes(sheetName);
+
+  useEffect(() => {
+    // Update theme colors when theme changes
+    const handleThemeChange = () => {
+      setThemeColors(getThemedChartColors());
+    };
+
+    window.addEventListener('themeChanged', handleThemeChange);
+    return () => window.removeEventListener('themeChanged', handleThemeChange);
+  }, []);
+
+  useEffect(() => {
+    setIsLoading(loading);
+  }, [loading]);
 
   const handleChartClick = (event, elements) => {
     if (elements.length > 0) {
@@ -144,19 +163,135 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
     }
   };
 
+  // Enhanced chart options with theme support and better interactivity
   const enhancedOptions = {
     ...options,
-    onClick: handleChartClick
+    onClick: handleChartClick,
+    onHover: (event, elements) => {
+      setHoveredBar(elements.length > 0 ? elements[0].index : null);
+    },
+    plugins: {
+      ...options?.plugins,
+      legend: {
+        ...options?.plugins?.legend,
+        labels: {
+          ...options?.plugins?.legend?.labels,
+          usePointStyle: true,
+          pointStyle: 'circle',
+          font: {
+            size: 12,
+            weight: '500'
+          },
+          color: '#374151'
+        }
+      },
+      tooltip: {
+        ...options?.plugins?.tooltip,
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        titleColor: '#1f2937',
+        bodyColor: '#374151',
+        borderColor: themeColors.primary,
+        borderWidth: 1,
+        cornerRadius: 12,
+        displayColors: true,
+        usePointStyle: true,
+        padding: 12,
+        titleFont: {
+          size: 14,
+          weight: 'bold'
+        },
+        bodyFont: {
+          size: 13
+        },
+        callbacks: {
+          ...options?.plugins?.tooltip?.callbacks,
+          title: (context) => {
+            return `Zone ${context[0].label}`;
+          },
+          label: (context) => {
+            const value = context.parsed.y;
+            const percentage = sheetName === 'glitchPercentage' ? '%' : '';
+            return `${context.dataset.label}: ${value}${percentage}`;
+          }
+        }
+      }
+    },
+    scales: {
+      ...options?.scales,
+      x: {
+        ...options?.scales?.x,
+        grid: {
+          ...options?.scales?.x?.grid,
+          color: 'rgba(156, 163, 175, 0.2)',
+          borderColor: 'rgba(156, 163, 175, 0.3)'
+        },
+        ticks: {
+          ...options?.scales?.x?.ticks,
+          color: '#6b7280',
+          font: {
+            size: 11,
+            weight: '500'
+          }
+        }
+      },
+      y: {
+        ...options?.scales?.y,
+        grid: {
+          ...options?.scales?.y?.grid,
+          color: 'rgba(156, 163, 175, 0.2)',
+          borderColor: 'rgba(156, 163, 175, 0.3)'
+        },
+        ticks: {
+          ...options?.scales?.y?.ticks,
+          color: '#6b7280',
+          font: {
+            size: 11,
+            weight: '500'
+          }
+        }
+      }
+    },
+    animation: {
+      duration: 1000,
+      easing: 'easeInOutQuart'
+    },
+    interaction: {
+      intersect: false,
+      mode: 'index'
+    }
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="uniform-chart-card group">
+        <div className="card-header">
+          <div className="flex items-center">
+            <div className="card-icon">
+              <svg className="w-5 h-5 text-white animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="card-title">{title}</h3>
+              <div className="flex items-center mt-1">
+                <div className="chart-status-indicator warning"></div>
+                <span className="text-xs text-gray-500 ml-2">Loading chart data...</span>
+              </div>
+            </div>
+          </div>
+          <div className="chart-metric-badge">
+            <svg className="w-3 h-3 mr-1 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Loading...
+          </div>
+        </div>
         <div className="chart-container">
-          <div className="chart-area flex items-center justify-center">
-            <div className="flex flex-col items-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              <p className="mt-2 text-gray-600">Loading {title}...</p>
+          <div className="chart-area chart-loading">
+            <div className="text-center">
+              <div className="chart-loading-spinner mb-4"></div>
+              <p className="text-gray-600 font-medium">Loading Chart...</p>
+              <p className="text-gray-400 text-sm mt-1">Preparing visualization</p>
             </div>
           </div>
         </div>
@@ -167,16 +302,44 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
   if (error) {
     return (
       <div className="uniform-chart-card group">
+        <div className="card-header">
+          <div className="flex items-center">
+            <div className="card-icon bg-gradient-to-br from-red-500 to-red-600">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="card-title">{title}</h3>
+              <div className="flex items-center mt-1">
+                <div className="chart-status-indicator error"></div>
+                <span className="text-xs text-gray-500 ml-2">Error loading data</span>
+              </div>
+            </div>
+          </div>
+          <div className="chart-metric-badge bg-red-50 text-red-700 border-red-200">
+            <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Error
+          </div>
+        </div>
         <div className="chart-container">
           <div className="chart-area flex items-center justify-center">
             <div className="text-center">
-              <div className="text-red-500 mb-2">
-                <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <div className="text-red-500 mb-4">
+                <svg className="w-16 h-16 mx-auto opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <p className="text-red-600 font-medium">Error loading {title}</p>
-              <p className="text-gray-500 text-sm mt-1">{error}</p>
+              <p className="text-red-600 font-semibold text-lg">Error Loading Chart</p>
+              <p className="text-gray-500 text-sm mt-2 max-w-md mx-auto">{error}</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+              >
+                Retry
+              </button>
             </div>
           </div>
         </div>
@@ -187,16 +350,41 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
   if (!data || !data.labels || data.labels.length === 0) {
     return (
       <div className="uniform-chart-card group">
+        <div className="card-header">
+          <div className="flex items-center">
+            <div className="card-icon bg-gradient-to-br from-gray-400 to-gray-500">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="card-title">{title}</h3>
+              <div className="flex items-center mt-1">
+                <div className="chart-status-indicator error"></div>
+                <span className="text-xs text-gray-500 ml-2">No data available</span>
+              </div>
+            </div>
+          </div>
+          <div className="chart-metric-badge bg-gray-50 text-gray-600 border-gray-200">
+            <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+            </svg>
+            Empty
+          </div>
+        </div>
         <div className="chart-container">
           <div className="chart-area flex items-center justify-center">
             <div className="text-center">
-              <div className="text-gray-400 mb-2">
-                <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              <div className="text-gray-400 mb-4">
+                <svg className="w-20 h-20 mx-auto opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
               </div>
-              <p className="text-gray-600 font-medium">No data available</p>
-              <p className="text-gray-500 text-sm mt-1">No data found for the selected filters</p>
+              <p className="text-gray-600 font-semibold text-lg">No Data Available</p>
+              <p className="text-gray-400 text-sm mt-2">Chart will appear when data is loaded</p>
+              <div className="mt-4">
+                <span className="chart-metric-badge bg-gray-50 text-gray-600 border-gray-200">Waiting for data...</span>
+              </div>
             </div>
           </div>
         </div>
@@ -204,21 +392,60 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
     );
   }
 
+  // Calculate chart metrics for display
+  const totalDataPoints = data?.labels?.length || 0;
+  const maxValue = data?.datasets?.[0]?.data ? Math.max(...data.datasets[0].data) : 0;
+  const totalValue = data?.datasets?.[0]?.data ? data.datasets[0].data.reduce((a, b) => a + b, 0) : 0;
+
   return (
     <>
       <div className="uniform-chart-card group">
+        {/* Enhanced Header */}
+        <div className="card-header">
+          <div className="flex items-center">
+            <div className="card-icon">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="card-title">{title}</h3>
+              <div className="flex items-center mt-1">
+                <div className="chart-status-indicator success"></div>
+                <span className="text-xs text-gray-500 ml-2">{totalDataPoints} zones • Interactive chart</span>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center space-x-3">
+            <div className="text-right">
+              <div className="text-2xl font-bold text-gray-800">
+                {sheetName === 'glitchPercentage' ? `${Math.round(totalValue / totalDataPoints || 0)}%` : totalValue}
+              </div>
+              <div className="text-xs text-gray-500">
+                {sheetName === 'glitchPercentage' ? 'Avg Coverage' : 'Total Count'}
+              </div>
+            </div>
+            <div className="chart-metric-badge">
+              <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+              </svg>
+              Max: {sheetName === 'glitchPercentage' ? `${maxValue}%` : maxValue}
+            </div>
+          </div>
+        </div>
+
         {/* Chart Container */}
         <div className="chart-container">
           <div className="chart-area">
-            <Bar data={data} options={enhancedOptions} />
+            <Bar ref={chartRef} data={data} options={enhancedOptions} />
           </div>
 
-          {/* Click instruction overlay */}
+          {/* Enhanced Click instruction overlay */}
           <div className="click-instruction">
-            <svg className="w-4 h-4 mr-1 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.121 2.122" />
             </svg>
-            Click bars for details
+            Click bars for detailed view
           </div>
         </div>
       </div>

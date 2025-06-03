@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -10,6 +10,7 @@ import {
   Legend,
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
+import { getCurrentTheme, getThemedChartColors } from '../utils/themeUtils';
 
 ChartJS.register(
   CategoryScale,
@@ -23,6 +24,24 @@ ChartJS.register(
 
 const LineChart = ({ data, options, title, loading = false, error = null, sheetName = '', rawData = [] }) => {
   const [selectedDetails, setSelectedDetails] = useState(null);
+  const [isLoading, setIsLoading] = useState(loading);
+  const [hoveredPoint, setHoveredPoint] = useState(null);
+  const chartRef = useRef(null);
+  const [themeColors, setThemeColors] = useState(getThemedChartColors());
+
+  useEffect(() => {
+    // Update theme colors when theme changes
+    const handleThemeChange = () => {
+      setThemeColors(getThemedChartColors());
+    };
+
+    window.addEventListener('themeChanged', handleThemeChange);
+    return () => window.removeEventListener('themeChanged', handleThemeChange);
+  }, []);
+
+  useEffect(() => {
+    setIsLoading(loading);
+  }, [loading]);
 
   const handleChartClick = (event, elements) => {
     if (elements.length > 0) {

@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Dashboard from './components/Dashboard';
 import AuthPage from './components/auth/AuthPage';
+import { initializeTheme } from './utils/themeUtils';
 
 // Main App Component with Auth Check
 const AppContent = () => {
@@ -29,6 +30,11 @@ const AppContent = () => {
 };
 
 function App() {
+  useEffect(() => {
+    // Initialize theme on app startup
+    initializeTheme();
+  }, []);
+
   return (
     <AuthProvider>
       <div className="App">

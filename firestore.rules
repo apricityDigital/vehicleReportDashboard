@@ -69,6 +69,19 @@ service cloud.firestore {
     match /admin_logs/{logId} {
       allow read, write: if isAdmin();
     }
+
+    // System configuration collection (admin only)
+    match /system/{document} {
+      allow read, write: if isAdmin();
+
+      // Allow reading config for all authenticated users (for app settings)
+      allow read: if isAuthenticated() && document == 'config';
+
+      // Subcollections (like config history)
+      match /{subcollection}/{subdocument} {
+        allow read, write: if isAdmin();
+      }
+    }
     
     // System settings collection (optional)
     match /settings/{settingId} {

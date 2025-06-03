@@ -41,21 +41,25 @@ export const filterData = (data, selectedDate, selectedZone, tripCountFilter = n
 
     // Apply trip count filter for lessThan3Trips data
     let tripCountMatch = true;
-    if (tripCountFilter !== null && tripCountFilter !== 'all' && row.TripCount0 !== undefined) {
+    if (tripCountFilter !== null && tripCountFilter !== 'all' && (row.TripCount0 !== undefined || row.TripCount1 !== undefined || row.TripCount2 !== undefined)) {
       switch (tripCountFilter) {
         case '0':
-          tripCountMatch = row.TripCount0 > 0;
+          tripCountMatch = (row.TripCount0 || 0) > 0;
           break;
         case '1':
-          tripCountMatch = row.TripCount1 > 0;
+          tripCountMatch = (row.TripCount1 || 0) > 0;
           break;
         case '2':
-          tripCountMatch = row.TripCount2 > 0;
+          tripCountMatch = (row.TripCount2 || 0) > 0;
           break;
         default:
-          tripCountMatch = true; // Show all vehicles with <3 trips
+          // For 'all' or any other value, show all vehicles with <3 trips
+          tripCountMatch = ((row.TripCount0 || 0) + (row.TripCount1 || 0) + (row.TripCount2 || 0)) > 0;
           break;
       }
+    } else if (tripCountFilter === 'all' && (row.TripCount0 !== undefined || row.TripCount1 !== undefined || row.TripCount2 !== undefined)) {
+      // For 'all' filter, include any row that has trip count data
+      tripCountMatch = ((row.TripCount0 || 0) + (row.TripCount1 || 0) + (row.TripCount2 || 0)) >= 0;
     }
 
     return dateMatch && zoneMatch && tripCountMatch;
@@ -166,8 +170,8 @@ export const processDataForChart = (data, valueField, labelField = 'Zone', sheet
   const isIssueChart = ['issuesPost0710', 'vehicleBreakdown', 'fuelStation', 'post06AMOpenIssues'].includes(sheetName);
   const isWorkshopChart = sheetName === 'sphereWorkshopExit';
 
-  if (isLessThan3TripsChart && tripCountFilter && tripCountFilter !== 'all') {
-    // Special handling for lessThan3Trips with specific trip count filter
+  if (isLessThan3TripsChart) {
+    // Special handling for lessThan3Trips chart
     const groupedData = {};
     const groupedRemarks = {};
 
@@ -182,17 +186,22 @@ export const processDataForChart = (data, valueField, labelField = 'Zone', sheet
 
       let value = 0;
 
-      // Get the specific trip count based on filter
-      switch (tripCountFilter) {
-        case '0':
-          value = row.TripCount0 || 0;
-          break;
-        case '1':
-          value = row.TripCount1 || 0;
-          break;
-        case '2':
-          value = row.TripCount2 || 0;
-          break;
+      if (tripCountFilter === 'all' || !tripCountFilter) {
+        // Show all vehicles with less than 3 trips (sum of 0, 1, and 2 trip counts)
+        value = (row.TripCount0 || 0) + (row.TripCount1 || 0) + (row.TripCount2 || 0);
+      } else {
+        // Get the specific trip count based on filter
+        switch (tripCountFilter) {
+          case '0':
+            value = row.TripCount0 || 0;
+            break;
+          case '1':
+            value = row.TripCount1 || 0;
+            break;
+          case '2':
+            value = row.TripCount2 || 0;
+            break;
+        }
       }
 
       const remarks = row.Remarks || '';
@@ -222,10 +231,16 @@ export const processDataForChart = (data, valueField, labelField = 'Zone', sheet
     const values = labels.map(label => groupedData[label]);
     const colors = getChartColors(sheetName);
 
+    // Create appropriate label based on filter
+    let datasetLabel = 'Underutilized Vehicles';
+    if (tripCountFilter && tripCountFilter !== 'all') {
+      datasetLabel = `Vehicles with ${tripCountFilter} Trip${tripCountFilter === '1' ? '' : 's'}`;
+    }
+
     return {
       labels,
       datasets: [{
-        label: `Vehicles with ${tripCountFilter} Trip${tripCountFilter === '1' ? '' : 's'}`,
+        label: datasetLabel,
         data: values,
         ...colors,
         borderWidth: 2,
