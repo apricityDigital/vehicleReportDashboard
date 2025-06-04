@@ -297,8 +297,8 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* Enhanced Charts Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 auto-rows-fr">
+        {/* Enhanced Charts Grid - Mobile Responsive */}
+        <div className="mobile-dashboard-grid md:grid md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 md:gap-6 lg:gap-8 auto-rows-fr">
           {Object.keys(CHART_TITLES).map(sheetName => (
             <div key={sheetName} className="flex">
               {sheetName === 'lessThan3Trips' ? (
@@ -310,12 +310,12 @@ const Dashboard = () => {
           ))}
         </div>
 
-        {/* Enhanced Summary Stats */}
+        {/* Enhanced Summary Stats - Mobile Responsive Typography */}
         {!loading && !error && (
-          <div className="mt-12">
-            <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">Dashboard Overview</h2>
-              <p className="text-gray-600">Key metrics and system information</p>
+          <div className="mt-8 md:mt-12">
+            <div className="text-center mb-6 md:mb-8">
+              <h2 className="responsive-text-xl md:responsive-text-2xl font-bold text-gray-800 mb-2 mobile-text-wrap">Dashboard Overview</h2>
+              <p className="responsive-text-sm md:responsive-text-base text-gray-600 mobile-text-wrap">Key metrics and system information</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

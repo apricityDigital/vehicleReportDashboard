@@ -162,12 +162,12 @@ export const getEnhancedChartOptions = (originalOptions = {}, chartType = 'bar')
         ticks: {
           color: '#6b7280',
           font: {
-            size: 11,
+            size: window.innerWidth < 768 ? 10 : window.innerWidth < 1024 ? 11 : 12,
             weight: '500',
             family: 'Inter, system-ui, sans-serif'
           },
-          padding: 8,
-          maxRotation: 45,
+          padding: window.innerWidth < 768 ? 6 : 8,
+          maxRotation: window.innerWidth < 768 ? 30 : 45,
           minRotation: 0
         },
         title: {
@@ -175,11 +175,11 @@ export const getEnhancedChartOptions = (originalOptions = {}, chartType = 'bar')
           text: chartType === 'line' ? 'Workshop Departure Time' : 'Zones',
           color: '#374151',
           font: {
-            size: 13,
+            size: window.innerWidth < 768 ? 11 : window.innerWidth < 1024 ? 12 : 13,
             weight: '600',
             family: 'Inter, system-ui, sans-serif'
           },
-          padding: 16
+          padding: window.innerWidth < 768 ? 12 : 16
         }
       },
       y: {
@@ -197,11 +197,11 @@ export const getEnhancedChartOptions = (originalOptions = {}, chartType = 'bar')
         ticks: {
           color: '#6b7280',
           font: {
-            size: 11,
+            size: window.innerWidth < 768 ? 10 : window.innerWidth < 1024 ? 11 : 12,
             weight: '500',
             family: 'Inter, system-ui, sans-serif'
           },
-          padding: 8,
+          padding: window.innerWidth < 768 ? 6 : 8,
           callback: function(value) {
             return Number.isInteger(value) ? value : '';
           }
@@ -211,11 +211,11 @@ export const getEnhancedChartOptions = (originalOptions = {}, chartType = 'bar')
           text: chartType === 'line' ? 'Zones' : 'Number of Vehicles',
           color: '#374151',
           font: {
-            size: 13,
+            size: window.innerWidth < 768 ? 11 : window.innerWidth < 1024 ? 12 : 13,
             weight: '600',
             family: 'Inter, system-ui, sans-serif'
           },
-          padding: 16
+          padding: window.innerWidth < 768 ? 12 : 16
         }
       }
     },

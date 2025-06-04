@@ -1,10 +1,22 @@
-import React from 'react';
+import React, { useState } from 'react';
 import apricityLogo from '../assets/apricity.png';
 import imcLogo from '../assets/imc1.png';
+import MobileNavigation from './MobileNavigation';
 
 const Header = ({ availableZones = [], user = null, onLogin, onLogout, onShowAdminPanel }) => {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
+  const closeMobileMenu = () => {
+    setIsMobileMenuOpen(false);
+  };
+
   return (
-    <header className="iccc-header shadow-2xl">
+    <>
+      <header className="iccc-header shadow-2xl relative z-30">
       {/* Main Header */}
       <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
         <div className="flex items-center justify-between">
@@ -29,17 +41,17 @@ const Header = ({ availableZones = [], user = null, onLogin, onLogout, onShowAdm
               </div>
             </div>
 
-            {/* IMC Text Branding */}
+            {/* IMC Text Branding - Enhanced Mobile Typography */}
             <div className="text-white">
               <div className="flex items-center space-x-1 sm:space-x-2 mb-0.5 sm:mb-1">
-                <h1 className="text-lg sm:text-xl lg:text-2xl font-bold imc-text-glow tracking-wide">
+                <h1 className="responsive-text-lg sm:responsive-text-xl lg:responsive-text-2xl font-bold imc-text-glow tracking-wide">
                   IMC
                 </h1>
                 <div className="imc-divider w-0.5 sm:w-1 h-4 sm:h-5 lg:h-6 bg-gradient-to-b from-blue-300 to-blue-500 rounded-full"></div>
-                <h2 className="iccc-title text-base sm:text-lg lg:text-xl font-bold tracking-wide">ICCC</h2>
+                <h2 className="iccc-title responsive-text-base sm:responsive-text-lg lg:responsive-text-xl font-bold tracking-wide">ICCC</h2>
               </div>
-              <p className="text-blue-200 text-xs sm:text-sm font-medium hidden sm:block">Indore Municipal Corporation</p>
-              <p className="text-blue-300 text-xs hidden lg:block">Integrated Command and Control Center</p>
+              <p className="text-blue-200 responsive-text-xs sm:responsive-text-sm font-medium hidden sm:block">Indore Municipal Corporation</p>
+              <p className="text-blue-300 responsive-text-xs hidden lg:block">Integrated Command and Control Center</p>
             </div>
 
             {/* Apricity Logo - Secondary */}
@@ -52,12 +64,12 @@ const Header = ({ availableZones = [], user = null, onLogin, onLogout, onShowAdm
             </div>
           </div>
 
-          {/* Center Section - Dashboard Title */}
+          {/* Center Section - Dashboard Title - Enhanced Typography */}
           <div className="text-center text-white hidden md:block">
-            <h2 className="iccc-title text-lg lg:text-xl font-bold">Daily Vehicle Report Dashboard</h2>
+            <h2 className="iccc-title responsive-text-lg lg:responsive-text-xl font-bold mobile-text-wrap">Daily Vehicle Report Dashboard</h2>
             <div className="flex items-center justify-center space-x-2 mt-1">
               <div className="status-indicator w-2 h-2 bg-green-400 rounded-full"></div>
-              <span className="text-xs text-green-300">Live System</span>
+              <span className="responsive-text-xs text-green-300">Live System</span>
             </div>
           </div>
 
@@ -79,8 +91,8 @@ const Header = ({ availableZones = [], user = null, onLogin, onLogout, onShowAdm
               </div>
             </div>
 
-            {/* User Authentication */}
-            <div className="flex items-center space-x-1 sm:space-x-2 lg:space-x-3">
+            {/* Desktop User Authentication */}
+            <div className="hidden md:flex items-center space-x-1 sm:space-x-2 lg:space-x-3">
               {user ? (
                 <div className="flex items-center space-x-1 sm:space-x-2 lg:space-x-3">
                   {/* Admin Dashboard Button (only for admins) */}
@@ -99,7 +111,7 @@ const Header = ({ availableZones = [], user = null, onLogin, onLogout, onShowAdm
                   )}
 
                   {/* User Info */}
-                  <div className="text-right text-white hidden md:block">
+                  <div className="text-right text-white">
                     <div className="text-sm font-medium">{user.name || 'User'}</div>
                     <div className="text-xs text-blue-200 capitalize">{user.role || 'Operator'}</div>
                   </div>
@@ -135,6 +147,27 @@ const Header = ({ availableZones = [], user = null, onLogin, onLogout, onShowAdm
                 </button>
               )}
             </div>
+
+            {/* Mobile User Avatar (shows on mobile when logged in) */}
+            {user && (
+              <div className="md:hidden w-8 h-8 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+            )}
+
+            {/* Hamburger Menu Button (Mobile & Tablet) */}
+            <button
+              onClick={toggleMobileMenu}
+              className={`md:hidden hamburger-menu ${isMobileMenuOpen ? 'active' : ''} touch-manipulation`}
+              aria-label="Toggle navigation menu"
+              aria-expanded={isMobileMenuOpen}
+            >
+              <div className="hamburger-line"></div>
+              <div className="hamburger-line"></div>
+              <div className="hamburger-line"></div>
+            </button>
           </div>
         </div>
       </div>
@@ -176,6 +209,18 @@ const Header = ({ availableZones = [], user = null, onLogin, onLogout, onShowAdm
         </div>
       </div>
     </header>
+
+    {/* Mobile Navigation */}
+    <MobileNavigation
+      isOpen={isMobileMenuOpen}
+      onClose={closeMobileMenu}
+      user={user}
+      onLogin={onLogin}
+      onLogout={onLogout}
+      onShowAdminPanel={onShowAdminPanel}
+      availableZones={availableZones}
+    />
+  </>
   );
 };
 

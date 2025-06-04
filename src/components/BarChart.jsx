@@ -357,11 +357,11 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
             </div>
-            <div>
-              <h3 className="card-title">{title}</h3>
+            <div className="flex-1 min-w-0">
+              <h3 className="card-title mobile-title-truncate" title={title}>{title}</h3>
               <div className="flex items-center mt-1">
                 <div className="chart-status-indicator error"></div>
-                <span className="text-xs text-gray-500 ml-2">No data available</span>
+                <span className="responsive-text-xs text-gray-500 ml-2">No data available</span>
               </div>
             </div>
           </div>
@@ -408,20 +408,20 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
             </div>
-            <div>
-              <h3 className="card-title">{title}</h3>
+            <div className="flex-1 min-w-0">
+              <h3 className="card-title mobile-title-truncate" title={title}>{title}</h3>
               <div className="flex items-center mt-1">
                 <div className="chart-status-indicator success"></div>
-                <span className="text-xs text-gray-500 ml-2">{totalDataPoints} zones • Interactive chart</span>
+                <span className="responsive-text-xs text-gray-500 ml-2">{totalDataPoints} zones • Interactive chart</span>
               </div>
             </div>
           </div>
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2 md:space-x-3">
             <div className="text-right">
-              <div className="text-2xl font-bold text-gray-800">
+              <div className="responsive-text-xl md:text-2xl font-bold text-gray-800">
                 {sheetName === 'glitchPercentage' ? `${Math.round(totalValue / totalDataPoints || 0)}%` : totalValue}
               </div>
-              <div className="text-xs text-gray-500">
+              <div className="responsive-text-xs text-gray-500">
                 {sheetName === 'glitchPercentage' ? 'Avg Coverage' : 'Total Count'}
               </div>
             </div>
@@ -429,23 +429,24 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
               <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
               </svg>
-              Max: {sheetName === 'glitchPercentage' ? `${maxValue}%` : maxValue}
+              <span className="hidden sm:inline">Max: </span>{sheetName === 'glitchPercentage' ? `${maxValue}%` : maxValue}
             </div>
           </div>
         </div>
 
-        {/* Chart Container */}
-        <div className="chart-container">
+        {/* Chart Container - Mobile Responsive */}
+        <div className="chart-container mobile-chart-wrapper">
           <div className="chart-area">
             <Bar ref={chartRef} data={data} options={enhancedOptions} />
           </div>
 
-          {/* Enhanced Click instruction overlay */}
-          <div className="click-instruction">
+          {/* Enhanced Click instruction overlay - Mobile Responsive */}
+          <div className="click-instruction mobile-click-instruction md:click-instruction">
             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.121 2.122" />
             </svg>
-            Click bars for detailed view
+            <span className="hidden sm:inline">Click bars for detailed view</span>
+            <span className="sm:hidden">Tap for details</span>
           </div>
         </div>
       </div>

@@ -108,8 +108,8 @@ const Signup = ({ onSuccess, onSwitchToLogin }) => {
           </div>
         </div>
 
-        {/* Signup Form */}
-        <div className="bg-white rounded-xl shadow-2xl p-4 sm:p-6 lg:p-8">
+        {/* Signup Form - Mobile Responsive */}
+        <div className="bg-white rounded-xl shadow-2xl mobile-form tablet-optimized p-4 sm:p-6 lg:p-8">
           <div className="text-center mb-4 sm:mb-6">
             <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">Request Access</h2>
             <p className="text-gray-600 text-sm sm:text-base">Submit your details for admin approval</p>

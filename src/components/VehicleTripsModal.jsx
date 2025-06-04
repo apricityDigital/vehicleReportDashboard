@@ -63,7 +63,7 @@ const VehicleTripsModal = ({
       className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-2 sm:p-4"
       onClick={handleBackdropClick}
     >
-      <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-7xl max-h-[98vh] sm:max-h-[95vh] overflow-hidden">
+      <div className="bg-white mobile-modal tablet-modal desktop-modal rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-7xl overflow-hidden">
         {/* Header */}
         <div className="bg-gradient-to-r from-red-500 to-orange-500 text-white p-4 sm:p-6">
           <div className="flex items-center justify-between">
@@ -89,8 +89,8 @@ const VehicleTripsModal = ({
           </div>
         </div>
 
-        {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[calc(95vh-120px)]">
+        {/* Content - Mobile Responsive */}
+        <div className="mobile-modal-content tablet-optimized overflow-y-auto mobile-scroll">
           {/* Statistics Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
             <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-4 border border-red-200">

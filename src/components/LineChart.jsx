@@ -131,18 +131,46 @@ const LineChart = ({ data, options, title, loading = false, error = null, sheetN
   return (
     <>
       <div className="uniform-chart-card group">
-        {/* Chart Container */}
-        <div className="chart-container">
+        {/* Enhanced Header */}
+        <div className="card-header">
+          <div className="flex items-center">
+            <div className="card-icon">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="card-title mobile-title-truncate" title={title}>{title}</h3>
+              <div className="flex items-center mt-1">
+                <div className="chart-status-indicator success"></div>
+                <span className="responsive-text-xs text-gray-500 ml-2">Workshop data • Interactive chart</span>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2 md:space-x-3">
+            <div className="chart-metric-badge">
+              <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="hidden sm:inline">Time-based</span>
+              <span className="sm:hidden">Time</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Chart Container - Mobile Responsive */}
+        <div className="chart-container mobile-chart-wrapper">
           <div className="chart-area">
             <Line data={data} options={enhancedOptions} />
           </div>
 
-          {/* Click instruction overlay */}
-          <div className="click-instruction">
+          {/* Click instruction overlay - Mobile Responsive */}
+          <div className="click-instruction mobile-click-instruction md:click-instruction">
             <svg className="w-4 h-4 mr-1 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.121 2.122" />
             </svg>
-            Click points for details
+            <span className="hidden sm:inline">Click points for details</span>
+            <span className="sm:hidden">Tap for details</span>
           </div>
         </div>
       </div>
