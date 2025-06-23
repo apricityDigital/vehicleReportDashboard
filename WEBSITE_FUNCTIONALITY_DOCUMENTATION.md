@@ -305,7 +305,7 @@ The **IMC ICCC Vehicle Report Dashboard** is a comprehensive web application des
 
 #### **Workshop Departure Chart Specifics**
 - **Data Source**: Google Sheets GID #291765477
-- **Chart Title**: "Sphere Vehicles Exit Late for the Workshop"
+- **Chart Title**: "Sphere Vehicles Leaving Workshops Late"
 - **X-Axis**: Workshop Departure Time
 - **Y-Axis**: Zones
 - **Chart Type**: Line chart (preferred over bar chart)

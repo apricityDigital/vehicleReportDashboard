@@ -754,11 +754,11 @@ export const CHART_TITLES = {
   lessThan3Trips: 'Vehicles with Less than 3 Trips',
   glitchPercentage: 'Route Coverage Percent',
   issuesPost0710: 'Vehicles Arriving At First Point After 7:10 AM',
-  fuelStation: 'Vehicles Going to Fuel Station',
-  post06AMOpenIssues: 'Vehicles Leaving Zone After 6PM',
-  vehicleBreakdown: 'Vehicle Breakdown Information',
-  vehicleNumbers: 'Vehicle Number with Zone Wise Breakdown',
-  sphereWorkshopExit: 'Sphere Vehicles Exit Late for the Workshop'
+  fuelStation: 'Vehicles Going to Fuel Station On Route',
+  post06AMOpenIssues: 'Open Tipper Leaving Zones Parking After 6:00 AM',
+  vehicleBreakdown: 'On Route Vehicles Breakdown Information',
+  vehicleNumbers: 'Zone Wise Breakdown Vehicle Count',
+  sphereWorkshopExit: 'Sphere Vehicles Leaving Workshops Late'
 };
 
 // Get value field for each sheet type
