@@ -111,7 +111,7 @@ const VehicleTripsModal = ({
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-orange-600 text-sm font-medium">Max per Zone</p>
-                  <p className="text-2xl font-bold text-orange-700">{maxValue}</p>
+                  <p className="text-2xl font-bold text-orange-700">{maxValue === -Infinity ? '0' : maxValue}</p>
                 </div>
                 <div className="bg-orange-500 rounded-lg p-2">
                   <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">

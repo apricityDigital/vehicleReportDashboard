@@ -412,7 +412,7 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
               <h3 className="card-title mobile-title-truncate" title={title}>{title}</h3>
               <div className="flex items-center mt-1">
                 <div className="chart-status-indicator success"></div>
-                <span className="responsive-text-xs text-gray-500 ml-2">{totalDataPoints} zones • Interactive chart</span>
+                <span className="responsive-text-xs text-gray-500 ml-2">{totalDataPoints} zones •</span>
               </div>
             </div>
           </div>
@@ -421,9 +421,9 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
               <div className="responsive-text-xl md:text-2xl font-bold text-gray-800">
                 {sheetName === 'glitchPercentage' ? `${Math.round(totalValue / totalDataPoints || 0)}%` : totalValue}
               </div>
-              <div className="responsive-text-xs text-gray-500">
+              {/* <div className="responsive-text-xs text-gray-500">
                 {sheetName === 'glitchPercentage' ? 'Avg Coverage' : 'Total Count'}
-              </div>
+              </div> */}
             </div>
             <div className="chart-metric-badge">
               <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">

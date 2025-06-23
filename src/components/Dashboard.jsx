@@ -128,7 +128,7 @@ const Dashboard = () => {
                 <div className="text-xs text-gray-600">Total Vehicles</div>
               </div>
               <div className="text-center bg-white bg-opacity-70 rounded-lg p-3 backdrop-blur-sm">
-                <div className="text-2xl font-bold text-orange-600">{maxValue}</div>
+                <div className="text-2xl font-bold text-orange-600">{maxValue === -Infinity ? '0' : maxValue}</div>
                 <div className="text-xs text-gray-600">Max per Zone</div>
               </div>
               <div className="text-center bg-white bg-opacity-70 rounded-lg p-3 backdrop-blur-sm">
@@ -146,13 +146,10 @@ const Dashboard = () => {
                 </svg>
                 View Detailed Analysis
               </div>
-              <p className="text-sm text-gray-500 mt-2">
-                Interactive charts, filters, and data tables
-              </p>
             </div>
 
             {/* Feature Highlights */}
-            <div className="grid grid-cols-2 gap-3 mt-6 w-full max-w-md">
+            {/* <div className="grid grid-cols-2 gap-3 mt-6 w-full max-w-md">
               <div className="flex items-center text-sm text-gray-600">
                 <svg className="w-4 h-4 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -177,7 +174,7 @@ const Dashboard = () => {
                 </svg>
                 Mobile Optimized
               </div>
-            </div>
+            </div> */}
           </div>
         </div>
       </div>

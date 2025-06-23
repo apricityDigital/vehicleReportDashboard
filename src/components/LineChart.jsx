@@ -143,7 +143,7 @@ const LineChart = ({ data, options, title, loading = false, error = null, sheetN
               <h3 className="card-title mobile-title-truncate" title={title}>{title}</h3>
               <div className="flex items-center mt-1">
                 <div className="chart-status-indicator success"></div>
-                <span className="responsive-text-xs text-gray-500 ml-2">Workshop data • Interactive chart</span>
+                <span className="responsive-text-xs text-gray-500 ml-2">Workshop data </span>
               </div>
             </div>
           </div>

@@ -74,7 +74,7 @@ const getDatasetLabel = (sheetName) => {
     onRouteVehicles: 'Vehicles On Route',
     onBoardAfter3PM: 'Vehicles On Board',
     lessThan3Trips: 'Underutilized Vehicles',
-    glitchPercentage: 'Software Glitch Rate',
+    glitchPercentage: 'Software Route Coverage',
     issuesPost0710: 'Late Arrivals',
     fuelStation: 'Fuel Visits',
     post06AMOpenIssues: 'Late Departures',
@@ -437,7 +437,7 @@ export const processDataForChart = (data, valueField, labelField = 'Zone', sheet
         labels,
         datasets: [
           {
-            label: 'Software Glitch Rate',
+            label: 'Software Route Coverage',
             data: softwareValues,
             backgroundColor: 'rgba(168, 85, 247, 0.8)',
             borderColor: 'rgba(168, 85, 247, 1)',
@@ -447,7 +447,7 @@ export const processDataForChart = (data, valueField, labelField = 'Zone', sheet
             borderSkipped: false
           },
           {
-            label: 'Actual Performance Rate',
+            label: 'Actual Route Coverage',
             data: actualValues,
             backgroundColor: 'rgba(34, 197, 94, 0.8)',
             borderColor: 'rgba(34, 197, 94, 1)',
@@ -534,7 +534,7 @@ export const processDataForChart = (data, valueField, labelField = 'Zone', sheet
 
 // Get metric-specific axis labels
 const getAxisLabels = (sheetName) => {
-  // Special case for route percent coverage chart which shows percentages
+  // Special case for Route Coverage Percent chart which shows percentages
   if (sheetName === 'glitchPercentage') {
     return {
       xLabel: 'Zones',
@@ -752,8 +752,8 @@ export const CHART_TITLES = {
   onRouteVehicles: 'On Route Vehicles After 3:00 PM',
  // onBoardAfter3PM: 'Vehicle on Route after 3:00 PM',
   lessThan3Trips: 'Vehicles with Less than 3 Trips',
-  glitchPercentage: 'Route Percent Coverage',
-  issuesPost0710: 'Vehicle Starting after 7:10AM',
+  glitchPercentage: 'Route Coverage Percent',
+  issuesPost0710: 'Vehicles Arriving At First Point After 7:10 AM',
   fuelStation: 'Vehicles Going to Fuel Station',
   post06AMOpenIssues: 'Vehicles Leaving Zone After 6PM',
   vehicleBreakdown: 'Vehicle Breakdown Information',
