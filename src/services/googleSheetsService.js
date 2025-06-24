@@ -1,4 +1,6 @@
 // Google Sheets service for fetching data
+import { format } from 'date-fns';
+
 const SPREADSHEET_ID = '1DsDk17Vyf2zj5kxr86JPVhYZ04ZstY0IAH7La4UeVa0';
 
 // Sheet GIDs for different reports
@@ -22,10 +24,6 @@ const getSheetCSVUrl = (gid) => {
 
 // Enhanced CSV parser with better handling of malformed Google Sheets data
 const parseCSV = (csvText) => {
-  console.log('🔍 CSV Parser - Input length:', csvText.length);
-  console.log('🔍 CSV Parser - Contains newlines:', csvText.includes('\n'));
-  console.log('🔍 CSV Parser - Contains dates:', csvText.includes('2025-'));
-
   // Handle different line break formats and fix malformed CSV
   let normalizedText = csvText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
@@ -81,7 +79,6 @@ const parseCSV = (csvText) => {
 
     for (let i = 0; i < line.length; i++) {
       const char = line[i];
-
       if (char === '"') {
         inQuotes = !inQuotes;
       } else if (char === ',' && !inQuotes) {
@@ -109,6 +106,7 @@ const parseCSV = (csvText) => {
       data.push(row);
     }
   }
+  console.log("Parsed Data:", data);  // Log the parsed data
 
   return data;
 };
@@ -116,7 +114,7 @@ const parseCSV = (csvText) => {
 // Transform wide format data to long format
 const transformWideToLong = (data) => {
   const longData = [];
-
+  console.log("Transforming wide format data to long format...");
   data.forEach(row => {
     const date = normalizeDate(row.Date);
     Object.keys(row).forEach(key => {
@@ -176,8 +174,13 @@ const transformMultiColumnData = (data) => {
 const transformVehicleBreakdownData = (data) => {
   const longData = [];
   const zoneBreakdowns = {};
- console.log("on route vehicles breakdown information ", data);
+
+  console.log("Starting vehicle breakdown transformation...");
+
   data.forEach(row => {
+    // Log each row for debugging
+    console.log('Row data:', row);
+
     const date = normalizeDate(row.Date);
     let zone = row.Zone;
     const issue = row.Issue || '';
@@ -186,15 +189,24 @@ const transformVehicleBreakdownData = (data) => {
     const spareStatus = row['Spare/OK'] || '';
     const spareTime = row['Spare/OK Time'] || '';
 
-    // Skip empty rows
-    if (!date || !zone || !issue) return;
+    // Skip empty rows or rows with missing critical data
+    if (!date || !zone || !issue) {
+      console.log('Skipping row due to missing data:', row);
+      return;
+    }
+
+    // Log to ensure that the zone and issue data are valid
+    console.log('Processing breakdown for Zone:', zone, 'Issue:', issue, 'Date:', date);
 
     // Ensure zone is a string for consistency
     zone = String(zone);
 
+    // Create a unique key for zone-date combination to handle multiple dates per zone
+    const zoneeDateKey = `${zone}_${date}`;
+
     // Initialize zone breakdown if not exists
-    if (!zoneBreakdowns[zone]) {
-      zoneBreakdowns[zone] = {
+    if (!zoneBreakdowns[zoneeDateKey]) {
+      zoneBreakdowns[zoneeDateKey] = {
         Date: date,
         Zone: zone,
         Count: 0,
@@ -203,32 +215,35 @@ const transformVehicleBreakdownData = (data) => {
       };
     }
 
-    // Increment count
-    zoneBreakdowns[zone].Count += 1;
+    // Increment count for this zone-date combination
+    zoneBreakdowns[zoneeDateKey].Count += 1;
 
-    // Track issue types
-    if (!zoneBreakdowns[zone].IssueBreakdown[issue]) {
-      zoneBreakdowns[zone].IssueBreakdown[issue] = 0;
+    // Track issue types in the breakdown
+    if (!zoneBreakdowns[zoneeDateKey].IssueBreakdown[issue]) {
+      zoneBreakdowns[zoneeDateKey].IssueBreakdown[issue] = 0;
     }
-    zoneBreakdowns[zone].IssueBreakdown[issue] += 1;
+    zoneBreakdowns[zoneeDateKey].IssueBreakdown[issue] += 1;
 
-    // Store detailed information
-    zoneBreakdowns[zone].Details.push({
+    // Store detailed breakdown information
+    zoneBreakdowns[zoneeDateKey].Details.push({
       vehicleNo,
       issue,
       breakdownTime,
       spareStatus,
-      spareTime
+      spareTime,
+      date // Include date in details for reference
     });
   });
 
-  // Convert to array format
+  // Convert the object values (zone breakdowns) into an array
   Object.values(zoneBreakdowns).forEach(zoneData => {
     if (zoneData.Count > 0) {
       longData.push(zoneData);
     }
   });
 
+  // Log final data to check if transformation is correct
+  console.log("Transformed vehicle breakdown data:", longData);
   return longData;
 };
 
@@ -486,43 +501,36 @@ const transformPercentageData = (data) => {
 // Transform vehicle numbers data to standardized format
 const transformVehicleNumbersData = (data) => {
   const longData = [];
-
   data.forEach(row => {
-    const date = normalizeDate(row.Date);
+    const rawDate = row.Date;
+    const date = normalizeDate(rawDate);
     let zone = row.Zone;
     const vehicleNumbers = row['Vehicle Numbers'] || '';
     const totalVehicles = parseInt(row['Total Vehicles']) || 1;
 
-    // Skip empty rows
     if (!date || !zone) return;
 
-    // Ensure zone is a string for consistency
-    zone = String(zone);
+    zone = String(zone).trim();
+
+    const vehicleList = vehicleNumbers
+      .replace(/\s*OPEN\s*/gi, '')
+      .split(/[\/,]/)
+      .map(v => v.trim())
+      .filter(v => v);
+
+    const finalCount = vehicleList.length || totalVehicles;
 
     longData.push({
       Date: date,
       Zone: zone,
-      Count: totalVehicles,
-      VehicleNumbers: vehicleNumbers,
-      TotalVehicles: totalVehicles
+      Count: finalCount,  // ✅ actual count
+      VehicleNumbers: vehicleList.join(', '),
+      TotalVehicles: finalCount, // ✅ reflect the corrected count
     });
   });
-
+  
   return longData;
 };
-// Transform sphere workshop exit data - keep raw data as is
-const transformSphereWorkshopExitData = (data) => {
-  return data.map(row => ({
-    Date: normalizeDate(row.Date),
-    Zone: row.Zone,
-    Ward: row.Ward || '',
-    'Permanent Vehicle Number': row['Permanent Vehicle Number'] || '',
-    'Spare Vehicle Number': row['Spare Vehicle Number'] || '',
-    'Workshop Departure Time': row['Workshop Departure Time'] || ''
-  })).filter(row => row.Date && row.Zone); // Only filter out completely empty rows
-};
-
-
 
 
 
@@ -535,24 +543,24 @@ export const fetchSheetData = async (sheetName) => {
     }
 
     const url = getSheetCSVUrl(gid);
+    console.log(`Fetching data for sheet: ${sheetName} from URL:`, url);
+
     const response = await fetch(url);
+    console.log("Response status:", response.status);
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const csvText = await response.text();
-
-
+    console.log(`Raw CSV Data for sheet ${sheetName}:`, csvText); // Log raw CSV
 
     let parsedData = parseCSV(csvText);
 
-    // Check data format and transform accordingly
     if (parsedData.length > 0) {
       const headers = Object.keys(parsedData[0]);
       const hasZoneColumns = headers.some(header => header.startsWith('Zone '));
       const hasZoneField = headers.includes('Zone');
-      const hasPercentageColumns = headers.some(header => header.includes('%'));
       const hasIssueColumns = headers.some(header =>
         header.includes('Driver Issue') ||
         header.includes('Helper Issue') ||
@@ -560,70 +568,63 @@ export const fetchSheetData = async (sheetName) => {
         header.includes('Workshop Issue')
       );
       const hasVehicleBreakdownColumns = headers.includes('Issue') && headers.includes('Vehicle No.');
-      const hasMultipleCountColumns = headers.filter(h => h !== 'Date' && h !== 'Zone' && !isNaN(parseInt(parsedData[0][h] || 0))).length > 1;
 
-      if (hasZoneColumns) {
-        // Wide format with Zone columns (e.g., Zone 1, Zone 2, etc.)
-        parsedData = transformWideToLong(parsedData);
-      } else if (sheetName === 'glitchPercentage' && hasPercentageColumns) {
-        // Special handling for glitch percentage data
-        parsedData = transformPercentageData(parsedData);
-      } else if (sheetName === 'lessThan3Trips') {
-        // Special handling for lessThan3Trips data to preserve individual trip counts
-        parsedData = transformLessThan3TripsData(parsedData);
-      } else if (sheetName === 'vehicleBreakdown' && hasVehicleBreakdownColumns) {
-        // Special handling for vehicle breakdown data with detailed breakdown information
-        parsedData = transformVehicleBreakdownData(parsedData);
-      } else if (sheetName === 'fuelStation') {
-        // Special handling for fuel station data with timing information
-        parsedData = transformFuelStationData(parsedData);
-      } else if (sheetName === 'issuesPost0710' || sheetName === 'post06AMOpenIssues') {
-        // Special handling for late vehicle data (after 6pm, after 7pm)
-        // Try detailed transformation first, fallback to basic if no detailed data
-        const detailedData = transformLateVehicleData(parsedData);
-        if (detailedData.length === 0 && parsedData.length > 0) {
-          // Fallback to basic transformation if no detailed data found
+      // Log header details for debugging
+      console.log('Parsed headers:', headers);
+      
+      try {
+        if (sheetName === 'vehicleBreakdown' && hasVehicleBreakdownColumns) {
+          // Special handling for vehicle breakdown data with detailed breakdown information
+          parsedData = transformVehicleBreakdownData(parsedData);
+        } else if (hasZoneColumns) {
+          // Wide format with Zone columns (e.g., Zone 1, Zone 2, etc.)
+          parsedData = transformWideToLong(parsedData);
+        } else if (sheetName === 'glitchPercentage') {
+          // Special handling for glitch percentage data
+          parsedData = transformPercentageData(parsedData);
+        } else if (sheetName === 'lessThan3Trips') {
+          // Special handling for lessThan3Trips data to preserve individual trip counts
+          parsedData = transformLessThan3TripsData(parsedData);
+        } else if (sheetName === 'fuelStation') {
+          // Special handling for fuel station data with timing information
+          parsedData = transformFuelStationData(parsedData);
+        } else if (sheetName === 'vehicleNumbers') {
+          parsedData = transformVehicleNumbersData(parsedData);
+        } else if (sheetName === 'issuesPost0710' || sheetName === 'post06AMOpenIssues') {
+          // Special handling for late vehicle data (after 6pm, after 7pm)
+          const detailedData = transformLateVehicleData(parsedData);
+          if (detailedData.length === 0 && parsedData.length > 0) {
+            parsedData = parsedData.map(row => ({
+              ...row,
+              Date: normalizeDate(row.Date),
+              Count: row.Count || 1
+            })).filter(row => row.Date && row.Zone);
+          } else {
+            parsedData = detailedData;
+          }
+        } else if (hasIssueColumns && ['issuesPost0710', 'post06AMOpenIssues'].includes(sheetName)) {
+          // Special handling for issue data to preserve breakdown information
+          parsedData = transformIssueData(parsedData);
+        } else if (hasZoneField) {
+          // Format with Zone field and multiple count columns
+          parsedData = transformMultiColumnData(parsedData);
+        } else {
+          // Default transformation for other sheets
           parsedData = parsedData.map(row => ({
             ...row,
             Date: normalizeDate(row.Date),
-            Count: row.Count || 1 // Default count of 1 if not specified
+            Count: row.Count || 1
           })).filter(row => row.Date && row.Zone);
-        } else {
-          parsedData = detailedData;
         }
-      } else if (hasIssueColumns && ['issuesPost0710', 'post06AMOpenIssues'].includes(sheetName)) {
-        // Special handling for issue data to preserve breakdown information
-        parsedData = transformIssueData(parsedData);
-      } else if (hasZoneField && hasMultipleCountColumns) {
-        // Format with Zone field and multiple count columns
-        parsedData = transformMultiColumnData(parsedData);
-      } else if (sheetName === 'vehicleNumbers') {
-        // Special handling for vehicle numbers data
-        parsedData = transformVehicleNumbersData(parsedData);
-      } else if (sheetName === 'sphereWorkshopExit') {
-        // Special handling for sphere workshop exit data
-        parsedData = transformSphereWorkshopExitData(parsedData);
-      } else if (sheetName === 'onRouteVehicles') {
-        // Standardize the onRouteVehicles sheet to use 'Count' instead of 'On Route Vehicle Count'
-        parsedData = parsedData.map(row => ({
-          ...row,
-          Date: normalizeDate(row.Date),
-          Count: row['On Route Vehicle Count'] || row['Count'] || 0
-        })).filter(row => row.Date && row.Zone); // Filter out empty rows
 
-      } else {
-        // Default transformation for other sheets
-        parsedData = parsedData.map(row => ({
-          ...row,
-          Date: normalizeDate(row.Date),
-          Count: row.Count || 1
-        })).filter(row => row.Date && row.Zone);
+        return parsedData;
+      } catch (error) {
+        console.error(`Error fetching data for ${sheetName}:`, error);
+        return [];
       }
+    } else {
+      return [];
     }
-
-
-
-    return parsedData;
   } catch (error) {
     console.error(`Error fetching data for ${sheetName}:`, error);
     return [];
@@ -668,14 +669,19 @@ export const getUniqueZones = (data) => {
 const normalizeDate = (dateStr) => {
   if (!dateStr) return '';
 
-  // Handle different date formats
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) {
-    return dateStr; // Return original if can't parse
-  }
+  try {
+    // Handle different date formats
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) {
+      return dateStr; // Return original if can't parse
+    }
 
-  // Return in YYYY-MM-DD format
-  return date.toISOString().split('T')[0];
+    // Return in YYYY-MM-DD format using date-fns for consistency
+    return format(date, 'yyyy-MM-dd');
+  } catch (error) {
+    console.warn('Date normalization error:', error);
+    return dateStr; // Return original on error
+  }
 };
 
 // Get unique dates from data

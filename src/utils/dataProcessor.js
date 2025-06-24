@@ -1,94 +1,91 @@
 import { format } from 'date-fns';
+import { shouldIncludeRow } from './dateFilterLogic';
 
 // Get current date in YYYY-MM-DD format
 export const getCurrentDate = () => {
   return format(new Date(), 'yyyy-MM-dd');
 };
-
 // Normalize date format to handle different date formats
 const normalizeDate = (dateStr) => {
   if (!dateStr) return '';
-
   // Handle different date formats
   const date = new Date(dateStr);
   if (isNaN(date.getTime())) {
     return dateStr; // Return original if can't parse
   }
-
   return format(date, 'yyyy-MM-dd');
 };
 
+/**
+ * Filter data by date, zone, and trip count
+ *
+ * This is the main filtering function used throughout the application.
+ * It uses the refactored filtering logic for better maintainability.
+ *
+ * @param {Array} data - Array of data rows to filter
+ * @param {string} selectedDate - Specific date filter value
+ * @param {string} selectedZone - Zone filter value
+ * @param {string} tripCountFilter - Trip count filter value
+ * @param {string} sheetName - Name of the sheet being filtered
+ * @param {string} startDate - Start date for range filtering
+ * @param {string} endDate - End date for range filtering
+ * @returns {Array} Filtered data array
+ */
+
 // Filter data by date range, quick date, zone, and trip count (for lessThan3Trips sheet)
-export const filterData = (data, dateRange, selectedZone, tripCountFilter = null, sheetName = '', quickDate = null) => {
+export const filterData = (
+  data,
+  dateRange,
+  selectedZone,
+  tripCountFilter = null,
+  sheetName = '',
+  quickDate = ''
+) => {
+  // Return empty array if no data provided
   if (!data || data.length === 0) {
     return [];
   }
 
+  // Note: sheetName parameter is kept for API compatibility with existing calls
+  // Currently unused but may be needed for future sheet-specific filtering logic
+  void sheetName;
+
+  // Handle different date parameter formats
+  let selectedDate = '';
+  let startDate = '';
+  let endDate = '';
+
+  // If quickDate is provided, use it as selectedDate
+  if (quickDate) {
+    selectedDate = quickDate;
+  }
+  // If dateRange is an object with from/to properties, use it as range
+  else if (dateRange && typeof dateRange === 'object' && (dateRange.from || dateRange.to)) {
+    startDate = dateRange.from || '';
+    endDate = dateRange.to || '';
+  }
+  // If dateRange is a string, use it as selectedDate
+  else if (dateRange && typeof dateRange === 'string') {
+    selectedDate = dateRange;
+  }
+
+  // Prepare filter object for the new filtering logic
+  const filters = {
+    selectedDate,
+    startDate,
+    endDate,
+    selectedZone,
+    tripCountFilter
+  };
+
+  // Apply filtering using the refactored logic
   const filtered = data.filter(row => {
-    // For workshop charts, be more lenient with date filtering to ensure data shows
-    if (sheetName === 'sphereWorkshopExit') {
-      // Only filter by zone if specified, ignore date filtering for now to troubleshoot
-      const zoneMatch = !selectedZone || String(row.Zone) === String(selectedZone);
-      return zoneMatch;
-    }
-
-    // Normalize dates for comparison
-    const rowDate = normalizeDate(row.Date);
-
-    // Date filtering - Quick date takes priority over date range
-    let dateMatch = true;
-    if (quickDate) {
-      // Quick date filtering - exact match
-      const quickDateNormalized = normalizeDate(quickDate);
-      dateMatch = rowDate === quickDateNormalized;
-    } else if (dateRange && (dateRange.from || dateRange.to)) {
-      // Date range filtering
-      const rowDateObj = new Date(rowDate);
-
-      if (dateRange.from) {
-        const fromDate = new Date(normalizeDate(dateRange.from));
-        dateMatch = dateMatch && rowDateObj >= fromDate;
-      }
-
-      if (dateRange.to) {
-        const toDate = new Date(normalizeDate(dateRange.to));
-        // Set to end of day for inclusive filtering
-        toDate.setHours(23, 59, 59, 999);
-        dateMatch = dateMatch && rowDateObj <= toDate;
-      }
-    }
-
-    const zoneMatch = !selectedZone || String(row.Zone) === String(selectedZone);
-
-    // Apply trip count filter for lessThan3Trips data
-    let tripCountMatch = true;
-    if (tripCountFilter !== null && tripCountFilter !== 'all' && (row.TripCount0 !== undefined || row.TripCount1 !== undefined || row.TripCount2 !== undefined)) {
-      switch (tripCountFilter) {
-        case '0':
-          tripCountMatch = (row.TripCount0 || 0) > 0;
-          break;
-        case '1':
-          tripCountMatch = (row.TripCount1 || 0) > 0;
-          break;
-        case '2':
-          tripCountMatch = (row.TripCount2 || 0) > 0;
-          break;
-        default:
-          // For 'all' or any other value, show all vehicles with <3 trips
-          tripCountMatch = ((row.TripCount0 || 0) + (row.TripCount1 || 0) + (row.TripCount2 || 0)) > 0;
-          break;
-      }
-    } else if (tripCountFilter === 'all' && (row.TripCount0 !== undefined || row.TripCount1 !== undefined || row.TripCount2 !== undefined)) {
-      // For 'all' filter, include any row that has trip count data
-      tripCountMatch = ((row.TripCount0 || 0) + (row.TripCount1 || 0) + (row.TripCount2 || 0)) >= 0;
-    }
-
-    return dateMatch && zoneMatch && tripCountMatch;
+    return shouldIncludeRow(row, filters);
   });
 
   return filtered;
 };
-
+//--------------------------
 // Get dataset label based on sheet type
 const getDatasetLabel = (sheetName) => {
   const labelMapping = {
@@ -500,8 +497,6 @@ export const processDataForChart = (data, valueField, labelField = 'Zone', sheet
   const groupedData = {};
   const groupedRemarks = {};
 
-
-
   data.forEach((row) => {
     const label = row[labelField] || 'Unknown';
 
@@ -771,7 +766,6 @@ export const getChartConfig = (title, sheetName) => {
 // Chart titles mapping
 export const CHART_TITLES = {
   onRouteVehicles: 'On Route Vehicles After 3:00 PM',
- // onBoardAfter3PM: 'Vehicle on Route after 3:00 PM',
   lessThan3Trips: 'Vehicles with Less than 3 Trips',
   glitchPercentage: 'Route Coverage Percent',
   issuesPost0710: 'Vehicles Arriving At First Point After 7:10 AM',
