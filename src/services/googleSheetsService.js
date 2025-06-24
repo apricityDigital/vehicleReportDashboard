@@ -176,7 +176,7 @@ const transformMultiColumnData = (data) => {
 const transformVehicleBreakdownData = (data) => {
   const longData = [];
   const zoneBreakdowns = {};
- console.log("data vehicle break down", data);
+ console.log("on route vehicles breakdown information ", data);
   data.forEach(row => {
     const date = normalizeDate(row.Date);
     let zone = row.Zone;

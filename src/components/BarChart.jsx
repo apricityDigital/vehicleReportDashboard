@@ -26,8 +26,7 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
   const [hoveredBar, setHoveredBar] = useState(null);
   const chartRef = useRef(null);
   const [themeColors, setThemeColors] = useState(getThemedChartColors());
-  const isIssueChart = ['issuesPost0710', 'vehicleBreakdown', 'fuelStation', 'post06AMOpenIssues'].includes(sheetName);
-
+  const isIssueChart = ['issuesPost0710', 'vehicleBreakdown', 'fuelStation', 'post06AMOpenIssues'].includes(sheetName); 
   useEffect(() => {
     // Update theme colors when theme changes
     const handleThemeChange = () => {
@@ -116,6 +115,44 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
             total: value,
             rawData: rawData.filter(row => row['Workshop Departure Time'] === workshopTime),
             details: dataset.vehicleDetails ? dataset.vehicleDetails[label] : null
+          });
+        } else if (sheetName === 'vehicleBreakdown') {
+          // Special handling for vehicle breakdown chart
+          let breakdownDetails = null;
+
+          // Look for Details array in the zone data from transformVehicleBreakdownData
+          const zoneWithDetails = zoneData.find(row => row.Details && Array.isArray(row.Details) && row.Details.length > 0);
+          if (zoneWithDetails) {
+            breakdownDetails = zoneWithDetails.Details.map(detail => ({
+              vehicleNo: detail.vehicleNo,
+              breakdownTime: detail.breakdownTime,
+              issue: detail.issue,
+              spareStatus: detail.spareStatus,
+              spareTime: detail.spareTime,
+              ward: detail.ward,
+              date: zoneWithDetails.Date
+            }));
+          } else {
+            // Fallback: create breakdown details from individual rows if Details array not found
+            breakdownDetails = zoneData.map(row => ({
+              vehicleNo: row['Vehicle No.'] || `Vehicle ${Math.random().toString(36).substr(2, 5)}`,
+              breakdownTime: row['Breakdown Time'] || 'Time not specified',
+              issue: row.Issue || 'Unknown Issue',
+              spareStatus: row['Spare/OK'] || 'Unknown',
+              spareTime: row['Spare/OK Time'] || '',
+              ward: row.Ward || '',
+              date: row.Date || ''
+            })).filter(detail => detail.vehicleNo);
+          }
+
+          setSelectedDetails({
+            type: 'vehicleBreakdown',
+            zone: label,
+            title: title,
+            sheetName: sheetName,
+            total: value,
+            rawData: zoneData,
+            details: breakdownDetails && breakdownDetails.length > 0 ? breakdownDetails : null
           });
         } else if (sheetName === 'fuelStation' || sheetName === 'issuesPost0710' || sheetName === 'post06AMOpenIssues') {
           // Extract timing details from the zone data
@@ -211,6 +248,13 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
           label: (context) => {
             const value = context.parsed.y;
             const percentage = sheetName === 'glitchPercentage' ? '%' : '';
+
+            // Special tooltip for vehicle breakdown chart
+            if (sheetName === 'vehicleBreakdown') {
+              const vehicleText = value === 1 ? 'Vehicle' : 'Vehicles';
+              return `${value} ${vehicleText} Breakdown`;
+            }
+
             return `${context.dataset.label}: ${value}${percentage}`;
           }
         }
@@ -498,7 +542,8 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
                     <div className="text-sm text-blue-500">
                       {selectedDetails.type === 'issue' ? 'Total Issues' :
                        selectedDetails.type === 'percentage' ? 'Route Coverage' :
-                       selectedDetails.type === 'vehicleNumbers' ? 'Total Vehicles' : 'Total Count'}
+                       selectedDetails.type === 'vehicleNumbers' ? 'Total Vehicles' :
+                       selectedDetails.type === 'vehicleBreakdown' ? 'Vehicle Breakdowns' : 'Total Count'}
                     </div>
                   </div>
                 </div>
@@ -626,6 +671,100 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
 
 
 
+
+              {/* Vehicle Breakdown Details */}
+              {selectedDetails.type === 'vehicleBreakdown' && selectedDetails.details && selectedDetails.details.length > 0 && (
+                <div className="mb-6">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                    Vehicle Breakdown Details ({selectedDetails.details.length} vehicles)
+                  </h4>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {selectedDetails.details.map((detail, index) => (
+                      <div key={index} className="p-4 bg-red-50 rounded-lg border border-red-200 hover:shadow-md transition-shadow">
+                        <div className="space-y-3">
+                          {/* Vehicle Information Header */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center">
+                              <svg className="w-4 h-4 mr-2 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              <span className="font-semibold text-gray-800">
+                                {detail.vehicleNo}
+                              </span>
+                            </div>
+                            {detail.spareStatus && (
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                detail.spareStatus.toLowerCase().includes('ok') || detail.spareStatus.toLowerCase().includes('resolved')
+                                  ? 'bg-green-100 text-green-800'
+                                  : 'bg-red-100 text-red-800'
+                              }`}>
+                                {detail.spareStatus}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Breakdown Information */}
+                          <div className="grid grid-cols-1 gap-2 text-sm">
+                            {detail.breakdownTime && (
+                              <div className="flex items-center">
+                                <svg className="w-3 h-3 mr-2 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span className="font-medium text-gray-700">Breakdown Time:</span>
+                                <span className="ml-2 text-red-600 font-semibold">{detail.breakdownTime}</span>
+                              </div>
+                            )}
+
+                            {detail.issue && (
+                              <div className="flex items-center">
+                                <svg className="w-3 h-3 mr-2 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                                </svg>
+                                <span className="font-medium text-gray-700">Issue:</span>
+                                <span className="ml-2 text-orange-600">{detail.issue}</span>
+                              </div>
+                            )}
+
+                            {detail.spareTime && (
+                              <div className="flex items-center">
+                                <svg className="w-3 h-3 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span className="font-medium text-gray-700">Spare/OK Time:</span>
+                                <span className="ml-2 text-blue-600 font-semibold">{detail.spareTime}</span>
+                              </div>
+                            )}
+
+                            {detail.ward && (
+                              <div className="flex items-center">
+                                <svg className="w-3 h-3 mr-2 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                <span className="font-medium text-gray-700">Ward:</span>
+                                <span className="ml-2 text-purple-600">{detail.ward}</span>
+                              </div>
+                            )}
+
+                            {detail.date && (
+                              <div className="flex items-center">
+                                <svg className="w-3 h-3 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                <span className="font-medium text-gray-700">Date:</span>
+                                <span className="ml-2 text-gray-600">{new Date(detail.date).toLocaleDateString()}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Issue Breakdown (for issue charts) */}
               {selectedDetails.type === 'issue' && selectedDetails.breakdown && (
