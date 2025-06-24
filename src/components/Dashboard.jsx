@@ -26,6 +26,8 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedDate, setSelectedDate] = useState(getCurrentDate());
+  const [dateRange, setDateRange] = useState({ from: '', to: '' });
+  const [quickDate, setQuickDate] = useState('');
   const [selectedZone, setSelectedZone] = useState('');
   const [tripCountFilter, setTripCountFilter] = useState('all');
   const [availableDates, setAvailableDates] = useState([]);
@@ -79,7 +81,7 @@ const Dashboard = () => {
 
   const renderLessThan3TripsNavigationCard = (sheetName) => {
     const sheetData = allData[sheetName] || [];
-    const filteredData = filterData(sheetData, selectedDate, selectedZone, tripCountFilter, sheetName);
+    const filteredData = filterData(sheetData, dateRange, selectedZone, tripCountFilter, sheetName, quickDate);
     const valueField = getValueField(sheetName);
     const chartData = processDataForChart(filteredData, valueField, 'Zone', sheetName, tripCountFilter);
 
@@ -186,7 +188,7 @@ const Dashboard = () => {
     const isLessThan3TripsChart = sheetName === 'lessThan3Trips';
     const currentTripCountFilter = isLessThan3TripsChart ? tripCountFilter : null;
 
-    const filteredData = filterData(sheetData, selectedDate, selectedZone, currentTripCountFilter, sheetName);
+    const filteredData = filterData(sheetData, dateRange, selectedZone, currentTripCountFilter, sheetName, quickDate);
     const valueField = getValueField(sheetName);
     const chartData = processDataForChart(filteredData, valueField, 'Zone', sheetName, currentTripCountFilter);
     const chartOptions = getChartConfig(CHART_TITLES[sheetName], sheetName);
@@ -197,7 +199,7 @@ const Dashboard = () => {
     if (sheetName === 'sphereWorkshopExit') {
       return (
         <LineChart
-          key={`${sheetName}-${selectedDate}-${selectedZone}-${currentTripCountFilter}`}
+          key={`${sheetName}-${dateRange?.from}-${dateRange?.to}-${quickDate}-${selectedZone}-${currentTripCountFilter}`}
           data={chartData}
           options={chartOptions}
           title={CHART_TITLES[sheetName]}
@@ -211,7 +213,7 @@ const Dashboard = () => {
 
     return (
       <BarChart
-        key={`${sheetName}-${selectedDate}-${selectedZone}-${currentTripCountFilter}`}
+        key={`${sheetName}-${dateRange?.from}-${dateRange?.to}-${quickDate}-${selectedZone}-${currentTripCountFilter}`}
         data={chartData}
         options={chartOptions}
         title={CHART_TITLES[sheetName]}
@@ -258,7 +260,8 @@ const Dashboard = () => {
         isOpen={showVehicleTripsModal}
         onClose={() => setShowVehicleTripsModal(false)}
         allData={allData}
-        selectedDate={selectedDate}
+        dateRange={dateRange}
+        quickDate={quickDate}
         selectedZone={selectedZone}
         loading={loading}
         error={error}
@@ -269,6 +272,10 @@ const Dashboard = () => {
         <Filters
           selectedDate={selectedDate}
           setSelectedDate={setSelectedDate}
+          dateRange={dateRange}
+          setDateRange={setDateRange}
+          quickDate={quickDate}
+          setQuickDate={setQuickDate}
           selectedZone={selectedZone}
           setSelectedZone={setSelectedZone}
           availableZones={availableZones}

@@ -18,8 +18,8 @@ const normalizeDate = (dateStr) => {
   return format(date, 'yyyy-MM-dd');
 };
 
-// Filter data by date, zone, and trip count (for lessThan3Trips sheet)
-export const filterData = (data, selectedDate, selectedZone, tripCountFilter = null, sheetName = '') => {
+// Filter data by date range, quick date, zone, and trip count (for lessThan3Trips sheet)
+export const filterData = (data, dateRange, selectedZone, tripCountFilter = null, sheetName = '', quickDate = null) => {
   if (!data || data.length === 0) {
     return [];
   }
@@ -34,9 +34,30 @@ export const filterData = (data, selectedDate, selectedZone, tripCountFilter = n
 
     // Normalize dates for comparison
     const rowDate = normalizeDate(row.Date);
-    const filterDate = normalizeDate(selectedDate);
 
-    const dateMatch = !selectedDate || rowDate === filterDate;
+    // Date filtering - Quick date takes priority over date range
+    let dateMatch = true;
+    if (quickDate) {
+      // Quick date filtering - exact match
+      const quickDateNormalized = normalizeDate(quickDate);
+      dateMatch = rowDate === quickDateNormalized;
+    } else if (dateRange && (dateRange.from || dateRange.to)) {
+      // Date range filtering
+      const rowDateObj = new Date(rowDate);
+
+      if (dateRange.from) {
+        const fromDate = new Date(normalizeDate(dateRange.from));
+        dateMatch = dateMatch && rowDateObj >= fromDate;
+      }
+
+      if (dateRange.to) {
+        const toDate = new Date(normalizeDate(dateRange.to));
+        // Set to end of day for inclusive filtering
+        toDate.setHours(23, 59, 59, 999);
+        dateMatch = dateMatch && rowDateObj <= toDate;
+      }
+    }
+
     const zoneMatch = !selectedZone || String(row.Zone) === String(selectedZone);
 
     // Apply trip count filter for lessThan3Trips data

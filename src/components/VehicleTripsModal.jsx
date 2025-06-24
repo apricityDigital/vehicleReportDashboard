@@ -8,14 +8,15 @@ import {
   getValueField
 } from '../utils/dataProcessor';
 
-const VehicleTripsModal = ({ 
-  isOpen, 
-  onClose, 
-  allData, 
-  selectedDate, 
-  selectedZone, 
-  loading, 
-  error 
+const VehicleTripsModal = ({
+  isOpen,
+  onClose,
+  allData,
+  dateRange,
+  quickDate,
+  selectedZone,
+  loading,
+  error
 }) => {
   const [tripCountFilter, setTripCountFilter] = useState('all');
   const [viewMode, setViewMode] = useState('chart'); // 'chart' or 'table'
@@ -24,7 +25,7 @@ const VehicleTripsModal = ({
 
   const sheetName = 'lessThan3Trips';
   const sheetData = allData[sheetName] || [];
-  const filteredData = filterData(sheetData, selectedDate, selectedZone, tripCountFilter, sheetName);
+  const filteredData = filterData(sheetData, dateRange, selectedZone, tripCountFilter, sheetName, quickDate);
   const valueField = getValueField(sheetName);
   const chartData = processDataForChart(filteredData, valueField, 'Zone', sheetName, tripCountFilter);
   const chartOptions = getChartConfig(CHART_TITLES[sheetName], sheetName);

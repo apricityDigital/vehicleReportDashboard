@@ -1,5 +1,4 @@
 import { getThemedChartColors } from './themeUtils';
-
 // Enhanced chart data processing with theme support
 export const enhanceChartData = (originalData, chartType = 'bar') => {
   if (!originalData || !originalData.datasets) return originalData;
