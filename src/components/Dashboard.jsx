@@ -27,7 +27,7 @@ const Dashboard = () => {
   const [error, setError] = useState(null);
   const [selectedDate, setSelectedDate] = useState(getCurrentDate());
   const [dateRange, setDateRange] = useState({ from: '', to: '' });
-  const [quickDate, setQuickDate] = useState('');
+  const [quickDate, setQuickDate] = useState(getCurrentDate()); // Set current date as default
   const [selectedZone, setSelectedZone] = useState('');
   const [tripCountFilter, setTripCountFilter] = useState('all');
   const [availableDates, setAvailableDates] = useState([]);
