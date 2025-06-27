@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import BarChart from './BarChart';
-import LineChart from './LineChart';
 import Filters from './Filters';
 import Header from './Header';
 import AdminDashboard from './admin/AdminDashboard';
@@ -195,10 +194,10 @@ const Dashboard = () => {
 
 
 
-    // Use LineChart for workshop chart, BarChart for others
+    // Use BarChart for all charts including workshop chart
     if (sheetName === 'sphereWorkshopExit') {
       return (
-        <LineChart
+        <BarChart
           key={`${sheetName}-${dateRange?.from}-${dateRange?.to}-${quickDate}-${selectedZone}-${currentTripCountFilter}`}
           data={chartData}
           options={chartOptions}

@@ -11,10 +11,10 @@ const SHEET_GIDS = {
   glitchPercentage: '1163492617',
   issuesPost0710: '203626227',
   fuelStation: '431461673',
-  post06AMOpenIssues: '291765477', // Updated to correct GID for Open Tipper data
+  post06AMOpenIssues: '291765477', // Open Tipper data - issues after 6AM
   vehicleBreakdown: '213524255',
   vehicleNumbers: '510665731',
-  sphereWorkshopExit: '1903869379' // Moved workshop data to correct sheet
+  sphereWorkshopExit: '1903869379' // Workshop departure data - sphere vehicles leaving workshops late
 };
 
 // Convert Google Sheets to CSV URL
@@ -649,7 +649,37 @@ const transformVehicleNumbersData = (data) => {
   return longData;
 };
 
+// Transform workshop data to preserve all columns
+const transformWorkshopData = (data) => {
+  console.log('Transforming workshop data...');
+  const transformedData = [];
 
+  data.forEach(row => {
+    const date = normalizeDate(row.Date);
+    const zone = row.Zone;
+    const ward = row.Ward;
+    const permanentVehicleNumber = row['Permanent Vehicle Number'];
+    const spareVehicleNumber = row['Spare Vehicle Number'];
+    const workshopDepartureTime = row['Workshop Departure Time'];
+
+    // Skip empty rows or rows without essential data
+    if (!date || !zone || !workshopDepartureTime) return;
+
+    // Preserve all workshop-specific data
+    transformedData.push({
+      Date: date,
+      Zone: zone,
+      Ward: ward,
+      'Permanent Vehicle Number': permanentVehicleNumber,
+      'Spare Vehicle Number': spareVehicleNumber,
+      'Workshop Departure Time': workshopDepartureTime,
+      Count: 1 // Each row represents one vehicle
+    });
+  });
+
+  console.log('Transformed workshop data:', transformedData);
+  return transformedData;
+};
 
 // Enhanced fetch function for all sheets
 export const fetchSheetData = async (sheetName) => {
@@ -707,6 +737,9 @@ export const fetchSheetData = async (sheetName) => {
           parsedData = transformFuelStationData(parsedData);
         } else if (sheetName === 'vehicleNumbers') {
           parsedData = transformVehicleNumbersData(parsedData);
+        } else if (sheetName === 'sphereWorkshopExit') {
+          // Special handling for workshop data to preserve all columns
+          parsedData = transformWorkshopData(parsedData);
         } else if ((sheetName === 'issuesPost0710' || sheetName === 'post06AMOpenIssues') && hasIssueColumns) {
           // Special handling for both issue sheets with issue breakdown columns
           parsedData = transformIssueData(parsedData);

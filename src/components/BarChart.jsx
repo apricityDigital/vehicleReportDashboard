@@ -243,6 +243,9 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
         callbacks: {
           ...options?.plugins?.tooltip?.callbacks,
           title: (context) => {
+            if (sheetName === 'sphereWorkshopExit') {
+              return `Zone ${context[0].label}`;
+            }
             return `Zone ${context[0].label}`;
           },
           label: (context) => {
@@ -253,6 +256,29 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
             if (sheetName === 'vehicleBreakdown') {
               const vehicleText = value === 1 ? 'Vehicle' : 'Vehicles';
               return `${value} ${vehicleText} Breakdown`;
+            }
+
+            // Special tooltip for workshop charts
+            if (sheetName === 'sphereWorkshopExit') {
+              const workshopTime = context.label;
+              const dataset = context.dataset;
+
+              // Get vehicle details for this workshop time
+              if (dataset.vehicleDetails && dataset.vehicleDetails[workshopTime]) {
+                const vehicleDetail = dataset.vehicleDetails[workshopTime][0];
+                const lines = [];
+
+                if (vehicleDetail.permanentVehicleNumber) {
+                  lines.push(`Permanent Vehicle: ${vehicleDetail.permanentVehicleNumber}`);
+                }
+                if (vehicleDetail.spareVehicleNumber) {
+                  lines.push(`Spare Vehicle: ${vehicleDetail.spareVehicleNumber}`);
+                }
+
+                return lines.length > 0 ? lines : [`Zone: ${value}`];
+              }
+
+              return [`Zone: ${value}`];
             }
 
             return `${context.dataset.label}: ${value}${percentage}`;
@@ -402,19 +428,14 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
               </svg>
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="card-title mobile-title-truncate" title={title}>{title}</h3>
+              {/* <h3 className="card-title mobile-title-truncate" title={title}>{title}</h3> */}
               <div className="flex items-center mt-1">
                 <div className="chart-status-indicator error"></div>
                 <span className="responsive-text-xs text-gray-500 ml-2">No data available</span>
               </div>
             </div>
           </div>
-          <div className="chart-metric-badge bg-gray-50 text-gray-600 border-gray-200">
-            <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-            </svg>
-            Empty
-          </div>
+          
         </div>
         <div className="chart-container">
           <div className="chart-area flex items-center justify-center">
@@ -461,20 +482,8 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
             </div>
           </div>
           <div className="flex items-center space-x-2 md:space-x-3">
-            <div className="text-right">
-              <div className="responsive-text-xl md:text-2xl font-bold text-gray-800">
-                {sheetName === 'glitchPercentage' ? `${Math.round(totalValue / totalDataPoints || 0)}%` : totalValue}
-              </div>
-              {/* <div className="responsive-text-xs text-gray-500">
-                {sheetName === 'glitchPercentage' ? 'Avg Coverage' : 'Total Count'}
-              </div> */}
-            </div>
-            <div className="chart-metric-badge">
-              <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-              </svg>
-              <span className="hidden sm:inline">Max: </span>{sheetName === 'glitchPercentage' ? `${maxValue}%` : maxValue}
-            </div>
+
+
           </div>
         </div>
 
@@ -526,26 +535,13 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
             <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
               {/* Summary Section */}
               <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-lg font-semibold text-blue-800">Summary</h4>
-                    <p className="text-sm text-blue-600">
-                      {selectedDetails.type === 'workshop'
-                        ? `Workshop Time: ${selectedDetails.workshopTime}`
-                        : `Zone ${selectedDetails.zone} overview`}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-3xl font-bold text-blue-600">
-                      {selectedDetails.type === 'percentage' ? `${selectedDetails.total}%` : selectedDetails.total}
-                    </div>
-                    <div className="text-sm text-blue-500">
-                      {selectedDetails.type === 'issue' ? 'Total Issues' :
-                       selectedDetails.type === 'percentage' ? 'Route Coverage' :
-                       selectedDetails.type === 'vehicleNumbers' ? 'Total Vehicles' :
-                       selectedDetails.type === 'vehicleBreakdown' ? 'Vehicle Breakdowns' : 'Total Count'}
-                    </div>
-                  </div>
+                <div>
+                  <h4 className="text-lg font-semibold text-blue-800">Summary</h4>
+                  <p className="text-sm text-blue-600">
+                    {selectedDetails.type === 'workshop'
+                      ? `Workshop Time: ${selectedDetails.workshopTime}`
+                      : `Zone ${selectedDetails.zone} overview`}
+                  </p>
                 </div>
               </div>
 

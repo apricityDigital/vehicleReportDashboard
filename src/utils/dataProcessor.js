@@ -337,8 +337,8 @@ export const processDataForChart = (data, valueField, labelField = 'Zone', sheet
       }]
     };
   } else if (isWorkshopChart) {
-    // Special handling for workshop charts - line chart showing zone analysis over time
-    // Sort data by workshop departure time for proper line progression
+    // Special handling for workshop charts - bar chart showing zone analysis over time
+    // Sort data by workshop departure time for proper progression
     const sortedData = data.sort((a, b) => {
       const timeA = a['Workshop Departure Time'] || '';
       const timeB = b['Workshop Departure Time'] || '';
@@ -380,15 +380,10 @@ export const processDataForChart = (data, valueField, labelField = 'Zone', sheet
       datasets: [{
         label: getDatasetLabel(sheetName),
         data: zoneValues,
-        borderColor: colors.borderColor,
-        backgroundColor: colors.backgroundColor,
-        pointBackgroundColor: colors.borderColor,
-        pointBorderColor: '#fff',
-        pointBorderWidth: 2,
-        pointRadius: 6,
-        pointHoverRadius: 8,
-        fill: false,
-        tension: 0.4, // Smooth line curves
+        ...colors,
+        borderWidth: 2,
+        borderRadius: 4,
+        borderSkipped: false,
         vehicleDetails: vehicleDetails // Store vehicle details for workshop charts
       }]
     };
@@ -597,17 +592,7 @@ export const getChartConfig = (title, sheetName) => {
         }
       },
       title: {
-        display: true,
-        text: title,
-        font: {
-          size: 16,
-          weight: 'bold',
-          family: 'Inter, system-ui, sans-serif'
-        },
-        padding: {
-          bottom: 20
-        },
-        color: '#1f2937'
+        display: false // Disable internal chart title to avoid duplication
       },
       tooltip: {
         backgroundColor: 'rgba(17, 24, 39, 0.95)',
@@ -640,7 +625,25 @@ export const getChartConfig = (title, sheetName) => {
               return `${datasetLabel}: ${value.toFixed(1)}%`;
             }
             if (isWorkshopChart) {
-              return `Zone: ${value}`;
+              const workshopTime = context.label;
+              const dataset = context.dataset;
+
+              // Get vehicle details for this workshop time
+              if (dataset.vehicleDetails && dataset.vehicleDetails[workshopTime]) {
+                const vehicleDetail = dataset.vehicleDetails[workshopTime][0];
+                const lines = [];
+
+                if (vehicleDetail.permanentVehicleNumber) {
+                  lines.push(`Permanent Vehicle: ${vehicleDetail.permanentVehicleNumber}`);
+                }
+                if (vehicleDetail.spareVehicleNumber) {
+                  lines.push(`Spare Vehicle: ${vehicleDetail.spareVehicleNumber}`);
+                }
+
+                return lines.length > 0 ? lines : [`Zone: ${value}`];
+              }
+
+              return [`Zone: ${value}`];
             }
             return `${datasetLabel}: ${value}`;
           },
