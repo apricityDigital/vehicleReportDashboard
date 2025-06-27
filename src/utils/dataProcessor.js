@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { shouldIncludeRow } from './dateFilterLogic';
+import { shouldIncludeRow } from './dateFilterLogic.js';
 
 // Get current date in YYYY-MM-DD format
 export const getCurrentDate = () => {

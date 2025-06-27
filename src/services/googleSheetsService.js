@@ -11,10 +11,10 @@ const SHEET_GIDS = {
   glitchPercentage: '1163492617',
   issuesPost0710: '203626227',
   fuelStation: '431461673',
-  post06AMOpenIssues: '1903869379',
+  post06AMOpenIssues: '291765477', // Updated to correct GID for Open Tipper data
   vehicleBreakdown: '213524255',
   vehicleNumbers: '510665731',
-  sphereWorkshopExit: '291765477'
+  sphereWorkshopExit: '1903869379' // Moved workshop data to correct sheet
 };
 
 // Convert Google Sheets to CSV URL
@@ -30,40 +30,51 @@ const parseCSV = (csvText) => {
   // Special handling for Google Sheets CSV that comes as one line with space-separated rows
   if (!normalizedText.includes('\n') && normalizedText.includes('2025-')) {
     console.log('⚠️  Detected single-line CSV format - applying fix');
+    console.log('📋 Raw CSV text:', normalizedText);
 
-    // Handle the specific format where header and data are separated
+    // For the specific format: "Date,Zone,Driver Issue,Helper Issue,Breakdown Issue,Workshop Issue 2025-05-12,Zone -1,0,0,0,1 2025-05-12,Zone -2,0,0,0,0..."
+    // Split by date pattern and reconstruct properly
 
-    // More robust pattern matching for header extraction
-    // Look for the last comma before the first date
-    const firstDateIndex = normalizedText.search(/\d{4}-\d{2}-\d{2}/);
-    if (firstDateIndex > 0) {
-      // Find the last comma before the first date
-      const headerPart = normalizedText.substring(0, firstDateIndex);
-      const lastCommaIndex = headerPart.lastIndexOf(',');
+    // First, extract the header (everything before the first date)
+    const firstDateMatch = normalizedText.match(/(\d{4}-\d{2}-\d{2})/);
+    if (firstDateMatch) {
+      const firstDateIndex = normalizedText.indexOf(firstDateMatch[0]);
+      const headerPart = normalizedText.substring(0, firstDateIndex).trim();
+      const dataPart = normalizedText.substring(firstDateIndex).trim();
 
-      if (lastCommaIndex > 0) {
-        // Split at the last comma before the date
-        const header = normalizedText.substring(0, lastCommaIndex + 1).trim();
-        const dataSection = normalizedText.substring(lastCommaIndex + 1).trim();
+      console.log('📋 Extracted header:', headerPart);
+      console.log('📊 Data part preview:', dataPart.substring(0, 100) + '...');
 
-        console.log('📋 Extracted header:', header);
-        console.log('📊 Data section preview:', dataSection.substring(0, 100) + '...');
+      // Split data by date pattern, keeping the dates
+      const dataRows = dataPart.split(/(?=\d{4}-\d{2}-\d{2})/).filter(row => row.trim());
 
-        // Split data section by date pattern (but keep the dates)
-        const dataRows = dataSection.split(/(?=\d{4}-\d{2}-\d{2})/).filter(row => row.trim());
+      console.log('📊 Found data rows:', dataRows.length);
+      console.log('📊 Sample data row:', dataRows[0]);
 
-        console.log('📊 Found data rows:', dataRows.length);
+      // Clean up each data row by replacing spaces between values with commas where appropriate
+      const cleanedDataRows = dataRows.map(row => {
+        // Replace spaces with commas, but be careful with zone names that might have spaces
+        // Pattern: date,zone,numbers... where numbers are separated by spaces
+        const trimmedRow = row.trim();
 
-        // Reconstruct with proper line breaks
-        normalizedText = header + '\n' + dataRows.join('\n');
-      } else {
-        // Last resort: Split by date pattern
-        normalizedText = normalizedText.replace(/(\d{4}-\d{2}-\d{2})/g, '\n$1');
-        normalizedText = normalizedText.replace(/^\n/, '');
-      }
+        // Find the pattern: YYYY-MM-DD,Zone -X,numbers
+        const match = trimmedRow.match(/^(\d{4}-\d{2}-\d{2}),(.+?),(.+)$/);
+        if (match) {
+          const date = match[1];
+          const zone = match[2];
+          const numbers = match[3].replace(/\s+/g, ','); // Replace spaces with commas for numbers
+          return `${date},${zone},${numbers}`;
+        }
+
+        return trimmedRow;
+      });
+
+      // Reconstruct with proper line breaks
+      normalizedText = headerPart + '\n' + cleanedDataRows.join('\n');
+
+      console.log('✅ Fixed CSV format - new line count:', normalizedText.split('\n').length);
+      console.log('✅ Sample fixed row:', normalizedText.split('\n')[1]);
     }
-
-    console.log('✅ Fixed CSV format - new line count:', normalizedText.split('\n').length);
   }
 
   const lines = normalizedText.split('\n');
@@ -308,6 +319,8 @@ const transformFuelStationData = (data) => {
 
 // Transform late vehicle data (for after 6pm, after 7pm) to preserve detailed information
 const transformLateVehicleData = (data) => {
+  console.log("Transforming late vehicle data...");
+  console.log("Sample row before transformation:", data[0]);
   const longData = [];
   const zoneBreakdowns = {};
 
@@ -370,19 +383,33 @@ const transformLateVehicleData = (data) => {
 
 // Transform issue data to preserve detailed issue breakdown
 const transformIssueData = (data) => {
+  console.log("Transforming issue data...");
+  console.log("Sample row before transformation:", data[0]);
+
   const longData = [];
+  const zoneBreakdowns = {};
 
   data.forEach(row => {
     const date = normalizeDate(row.Date);
     let zone = row.Zone;
 
-    // Extract zone number from zone names like "Zone 1 - Kila Maidan" or "Zone -1"
+    // Skip empty rows
+    if (!date || !zone) {
+      console.log('Skipping row due to missing date or zone:', row);
+      return;
+    }
+
+    // Extract zone number from zone names like "Zone -1", "ZONE -2", etc.
+    // Convert negative zones to positive for display (Zone -1 becomes Zone 1)
     if (zone) {
-      const zoneMatch = zone.match(/Zone\s*(-?\d+)/);
+      const zoneMatch = zone.match(/ZONE\s*(-?\d+)|Zone\s*(-?\d+)/i);
       if (zoneMatch) {
-        zone = zoneMatch[1];
+        const zoneNumber = zoneMatch[1] || zoneMatch[2];
+        zone = Math.abs(parseInt(zoneNumber)).toString(); // Convert to positive number
       }
     }
+
+    console.log('Processing issue data for Zone:', zone, 'Date:', date);
 
     // Extract issue counts
     const driverIssue = parseInt(row['Driver Issue']) || 0;
@@ -393,27 +420,117 @@ const transformIssueData = (data) => {
 
     const totalCount = driverIssue + helperIssue + breakdownIssue + workshopIssue + otherIssue;
 
-    if (totalCount > 0) {
-      longData.push({
+    console.log('Issue counts for zone', zone, ':', {
+      driverIssue, helperIssue, breakdownIssue, workshopIssue, otherIssue, totalCount
+    });
+
+    // Create a unique key for zone-date combination
+    const zoneDateKey = `${zone}_${date}`;
+
+    // Initialize zone breakdown if not exists
+    if (!zoneBreakdowns[zoneDateKey]) {
+      zoneBreakdowns[zoneDateKey] = {
         Date: date,
         Zone: zone,
-        Count: totalCount,
-        DriverIssue: driverIssue,
-        HelperIssue: helperIssue,
-        BreakdownIssue: breakdownIssue,
-        WorkshopIssue: workshopIssue,
-        OtherIssue: otherIssue,
-        IssueBreakdown: {
-          'Driver Issue': driverIssue,
-          'Helper Issue': helperIssue,
-          'Breakdown Issue': breakdownIssue,
-          'Workshop Issue': workshopIssue,
-          'Other Issue': otherIssue
-        }
-      });
+        Count: 0,
+        DriverIssue: 0,
+        HelperIssue: 0,
+        BreakdownIssue: 0,
+        WorkshopIssue: 0,
+        OtherIssue: 0,
+        IssueBreakdown: {},
+        Details: []
+      };
+    }
+
+    // Add to totals
+    zoneBreakdowns[zoneDateKey].Count += totalCount;
+    zoneBreakdowns[zoneDateKey].DriverIssue += driverIssue;
+    zoneBreakdowns[zoneDateKey].HelperIssue += helperIssue;
+    zoneBreakdowns[zoneDateKey].BreakdownIssue += breakdownIssue;
+    zoneBreakdowns[zoneDateKey].WorkshopIssue += workshopIssue;
+    zoneBreakdowns[zoneDateKey].OtherIssue += otherIssue;
+
+    // Update issue breakdown
+    zoneBreakdowns[zoneDateKey].IssueBreakdown = {
+      'Driver Issue': zoneBreakdowns[zoneDateKey].DriverIssue,
+      'Helper Issue': zoneBreakdowns[zoneDateKey].HelperIssue,
+      'Breakdown Issue': zoneBreakdowns[zoneDateKey].BreakdownIssue,
+      'Workshop Issue': zoneBreakdowns[zoneDateKey].WorkshopIssue,
+      'Other Issue': zoneBreakdowns[zoneDateKey].OtherIssue
+    };
+
+    // Store detailed information for each issue type
+    // Determine the context based on the sheet name (if available in scope)
+    const isPost06AM = true; // This function is used for both sheets, but we can determine context
+    const timeContext = isPost06AM ? 'After 6:00 AM' : 'After 7:10 AM';
+    const actionContext = isPost06AM ? 'left zone parking' : 'arrived at first point';
+
+    if (driverIssue > 0) {
+      for (let i = 0; i < driverIssue; i++) {
+        zoneBreakdowns[zoneDateKey].Details.push({
+          vehicleNo: `Vehicle ${zoneBreakdowns[zoneDateKey].Details.length + 1}`,
+          issue: 'Driver Issue',
+          time: timeContext,
+          status: 'Reported',
+          remarks: `Open tipper ${actionContext} ${timeContext} due to driver issue`
+        });
+      }
+    }
+    if (helperIssue > 0) {
+      for (let i = 0; i < helperIssue; i++) {
+        zoneBreakdowns[zoneDateKey].Details.push({
+          vehicleNo: `Vehicle ${zoneBreakdowns[zoneDateKey].Details.length + 1}`,
+          issue: 'Helper Issue',
+          time: timeContext,
+          status: 'Reported',
+          remarks: `Open tipper ${actionContext} ${timeContext} due to helper issue`
+        });
+      }
+    }
+    if (breakdownIssue > 0) {
+      for (let i = 0; i < breakdownIssue; i++) {
+        zoneBreakdowns[zoneDateKey].Details.push({
+          vehicleNo: `Vehicle ${zoneBreakdowns[zoneDateKey].Details.length + 1}`,
+          issue: 'Breakdown Issue',
+          time: timeContext,
+          status: 'Reported',
+          remarks: `Open tipper ${actionContext} ${timeContext} due to breakdown`
+        });
+      }
+    }
+    if (workshopIssue > 0) {
+      for (let i = 0; i < workshopIssue; i++) {
+        zoneBreakdowns[zoneDateKey].Details.push({
+          vehicleNo: `Vehicle ${zoneBreakdowns[zoneDateKey].Details.length + 1}`,
+          issue: 'Workshop Issue',
+          time: timeContext,
+          status: 'Reported',
+          remarks: `Open tipper ${actionContext} ${timeContext} due to workshop issue`
+        });
+      }
+    }
+    if (otherIssue > 0) {
+      for (let i = 0; i < otherIssue; i++) {
+        zoneBreakdowns[zoneDateKey].Details.push({
+          vehicleNo: `Vehicle ${zoneBreakdowns[zoneDateKey].Details.length + 1}`,
+          issue: 'Other Issue',
+          time: timeContext,
+          status: 'Reported',
+          remarks: `Open tipper ${actionContext} ${timeContext} due to other issue`
+        });
+      }
     }
   });
 
+  // Convert to array format
+  Object.values(zoneBreakdowns).forEach(zoneData => {
+    if (zoneData.Count > 0) {
+      longData.push(zoneData);
+    }
+  });
+
+  console.log("Transformed issue data:", longData);
   return longData;
 };
 
@@ -590,20 +707,8 @@ export const fetchSheetData = async (sheetName) => {
           parsedData = transformFuelStationData(parsedData);
         } else if (sheetName === 'vehicleNumbers') {
           parsedData = transformVehicleNumbersData(parsedData);
-        } else if (sheetName === 'issuesPost0710' || sheetName === 'post06AMOpenIssues') {
-          // Special handling for late vehicle data (after 6pm, after 7pm)
-          const detailedData = transformLateVehicleData(parsedData);
-          if (detailedData.length === 0 && parsedData.length > 0) {
-            parsedData = parsedData.map(row => ({
-              ...row,
-              Date: normalizeDate(row.Date),
-              Count: row.Count || 1
-            })).filter(row => row.Date && row.Zone);
-          } else {
-            parsedData = detailedData;
-          }
-        } else if (hasIssueColumns && ['issuesPost0710', 'post06AMOpenIssues'].includes(sheetName)) {
-          // Special handling for issue data to preserve breakdown information
+        } else if ((sheetName === 'issuesPost0710' || sheetName === 'post06AMOpenIssues') && hasIssueColumns) {
+          // Special handling for both issue sheets with issue breakdown columns
           parsedData = transformIssueData(parsedData);
         } else if (hasZoneField) {
           // Format with Zone field and multiple count columns
