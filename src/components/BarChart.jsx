@@ -428,7 +428,7 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
               </svg>
             </div>
             <div className="flex-1 min-w-0">
-              {/* <h3 className="card-title mobile-title-truncate" title={title}>{title}</h3> */}
+              <h3 className="card-title mobile-title-truncate" title={title}>{title}</h3>
               <div className="flex items-center mt-1">
                 <div className="chart-status-indicator error"></div>
                 <span className="responsive-text-xs text-gray-500 ml-2">No data available</span>
