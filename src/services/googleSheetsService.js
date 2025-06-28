@@ -14,7 +14,7 @@ const SHEET_GIDS = {
   post06AMOpenIssues: '291765477', // Open Tipper data - issues after 6AM
   vehicleBreakdown: '213524255',
   vehicleNumbers: '510665731',
-  sphereWorkshopExit: '1903869379' // Workshop departure data - sphere vehicles leaving workshops late
+  sphereWorkshopExit: '1903869379' // Workshop departure data - Spare Vehicles Leaving Workshops Late
 };
 
 // Convert Google Sheets to CSV URL

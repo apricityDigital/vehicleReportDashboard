@@ -786,7 +786,7 @@ export const CHART_TITLES = {
   post06AMOpenIssues: 'Open Tipper Leaving Zones Parking After 6:00 AM',
   vehicleBreakdown: 'On Route Vehicles Breakdown Information',
   vehicleNumbers: 'Zone Wise Breakdown Vehicle Count',
-  sphereWorkshopExit: 'Sphere Vehicles Leaving Workshops Late'
+  sphereWorkshopExit: 'Spare Vehicles Leaving Workshops Late'
 };
 
 // Get value field for each sheet type
