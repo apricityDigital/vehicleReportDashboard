@@ -649,36 +649,86 @@ const transformVehicleNumbersData = (data) => {
   return longData;
 };
 
-// Transform workshop data to preserve all columns
+// Transform workshop data to group by Ward instead of time
 const transformWorkshopData = (data) => {
-  console.log('Transforming workshop data...');
-  const transformedData = [];
+  const longData = [];
+  const wardBreakdowns = {};
+
+  console.log("Starting workshop data transformation...");
 
   data.forEach(row => {
+    // Log each row for debugging
+    console.log('Workshop row data:', row);
+
     const date = normalizeDate(row.Date);
     const zone = row.Zone;
-    const ward = row.Ward;
-    const permanentVehicleNumber = row['Permanent Vehicle Number'];
-    const spareVehicleNumber = row['Spare Vehicle Number'];
-    const workshopDepartureTime = row['Workshop Departure Time'];
+    const ward = row.Ward || '';
+    const permanentVehicleNumber = row['Permanent Vehicle Number'] || '';
+    const spareVehicleNumber = row['Spare Vehicle Number'] || '';
+    const workshopDepartureTime = row['Workshop Departure Time'] || '';
 
-    // Skip empty rows or rows without essential data
-    if (!date || !zone || !workshopDepartureTime) return;
+    // Skip empty rows or rows with missing critical data
+    if (!date || !zone || !ward) {
+      console.log('Skipping workshop row due to missing data:', row);
+      return;
+    }
 
-    // Preserve all workshop-specific data
-    transformedData.push({
-      Date: date,
-      Zone: zone,
-      Ward: ward,
-      'Permanent Vehicle Number': permanentVehicleNumber,
-      'Spare Vehicle Number': spareVehicleNumber,
-      'Workshop Departure Time': workshopDepartureTime,
-      Count: 1 // Each row represents one vehicle
+    // Log to ensure that the ward and zone data are valid
+    console.log('Processing workshop for Ward:', ward, 'Zone:', zone, 'Date:', date);
+
+    // Ensure ward is a string for consistency
+    const wardKey = String(ward);
+
+    // Create a unique key for ward-date combination to handle multiple dates per ward
+    const wardDateKey = `${wardKey}_${date}`;
+
+    // Initialize ward breakdown if not exists
+    if (!wardBreakdowns[wardDateKey]) {
+      wardBreakdowns[wardDateKey] = {
+        Date: date,
+        Ward: wardKey,
+        Count: 0,
+        VehicleDetails: [],
+        Zones: new Set() // Track unique zones for this ward
+      };
+    }
+
+    // Increment count for this ward-date combination
+    wardBreakdowns[wardDateKey].Count += 1;
+
+    // Add zone to the set of zones for this ward
+    wardBreakdowns[wardDateKey].Zones.add(zone);
+
+    // Store detailed vehicle information
+    wardBreakdowns[wardDateKey].VehicleDetails.push({
+      zone,
+      permanentVehicleNumber,
+      spareVehicleNumber,
+      workshopDepartureTime,
+      date
     });
   });
 
-  console.log('Transformed workshop data:', transformedData);
-  return transformedData;
+  // Convert the object values (ward breakdowns) into an array
+  Object.values(wardBreakdowns).forEach(wardData => {
+    if (wardData.Count > 0) {
+      // Convert zones Set to array for easier handling
+      const zonesArray = Array.from(wardData.Zones);
+
+      longData.push({
+        Date: wardData.Date,
+        Ward: wardData.Ward,
+        Count: wardData.Count,
+        Zones: zonesArray.join(', '), // Store as comma-separated string
+        ZoneList: zonesArray, // Store as array for processing
+        VehicleDetails: wardData.VehicleDetails
+      });
+    }
+  });
+
+  // Log final data to check if transformation is correct
+  console.log("Transformed workshop data:", longData);
+  return longData;
 };
 
 // Enhanced fetch function for all sheets

@@ -102,18 +102,17 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
             details: null
           });
         } else if (sheetName === 'sphereWorkshopExit') {
-          // Special handling for workshop exit chart - label is now workshop departure time
-          const workshopTime = label;
-          const zone = value;
+          // Special handling for workshop exit chart - label is now ward number
+          const ward = label;
+          const vehicleCount = value;
 
           setSelectedDetails({
             type: 'workshop',
-            zone: zone,
-            workshopTime: workshopTime,
+            ward: ward,
             title: title,
             sheetName: sheetName,
-            total: value,
-            rawData: rawData.filter(row => row['Workshop Departure Time'] === workshopTime),
+            total: vehicleCount,
+            rawData: rawData.filter(row => row.Ward === ward),
             details: dataset.vehicleDetails ? dataset.vehicleDetails[label] : null
           });
         } else if (sheetName === 'vehicleBreakdown') {
@@ -260,25 +259,24 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
 
             // Special tooltip for workshop charts
             if (sheetName === 'sphereWorkshopExit') {
-              const workshopTime = context.label;
+              const ward = context.label;
               const dataset = context.dataset;
 
-              // Get vehicle details for this workshop time
-              if (dataset.vehicleDetails && dataset.vehicleDetails[workshopTime]) {
-                const vehicleDetail = dataset.vehicleDetails[workshopTime][0];
-                const lines = [];
+              // Get vehicle details for this ward
+              if (dataset.vehicleDetails && dataset.vehicleDetails[ward]) {
+                const vehicleDetails = dataset.vehicleDetails[ward];
+                const lines = [`Vehicles: ${value}`];
 
-                if (vehicleDetail.permanentVehicleNumber) {
-                  lines.push(`Permanent Vehicle: ${vehicleDetail.permanentVehicleNumber}`);
-                }
-                if (vehicleDetail.spareVehicleNumber) {
-                  lines.push(`Spare Vehicle: ${vehicleDetail.spareVehicleNumber}`);
+                // Show zones covered by this ward
+                const zones = [...new Set(vehicleDetails.map(detail => detail.zone || detail.zones).filter(Boolean))];
+                if (zones.length > 0) {
+                  lines.push(`Zones: ${zones.join(', ')}`);
                 }
 
-                return lines.length > 0 ? lines : [`Zone: ${value}`];
+                return lines;
               }
 
-              return [`Zone: ${value}`];
+              return [`Vehicles: ${value}`];
             }
 
             return `${context.dataset.label}: ${value}${percentage}`;
@@ -517,7 +515,7 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
                     </svg>
                   </div>
                   {selectedDetails.type === 'workshop'
-                    ? `Workshop Time: ${selectedDetails.workshopTime} - Zone ${selectedDetails.zone}`
+                    ? `Ward ${selectedDetails.ward} - ${selectedDetails.title}`
                     : `Zone ${selectedDetails.zone} - ${selectedDetails.title}`}
                 </h3>
                 <p className="text-sm text-gray-600 mt-1">Detailed breakdown and information</p>
@@ -539,7 +537,7 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
                   <h4 className="text-lg font-semibold text-blue-800">Summary</h4>
                   <p className="text-sm text-blue-600">
                     {selectedDetails.type === 'workshop'
-                      ? `Workshop Time: ${selectedDetails.workshopTime}`
+                      ? `Ward ${selectedDetails.ward} overview`
                       : `Zone ${selectedDetails.zone} overview`}
                   </p>
                 </div>
@@ -930,7 +928,7 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
                     <svg className="w-5 h-5 mr-2 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
                     </svg>
-                    Workshop Exit Vehicle Details ({selectedDetails.rawData.length} vehicles)
+                    Ward {selectedDetails.ward} Vehicle Details ({selectedDetails.rawData.length} vehicles)
                   </h4>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     {selectedDetails.rawData.map((detail, index) => (

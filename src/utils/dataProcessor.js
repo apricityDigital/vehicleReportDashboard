@@ -337,49 +337,60 @@ export const processDataForChart = (data, valueField, labelField = 'Zone', sheet
       }]
     };
   } else if (isWorkshopChart) {
-    // Special handling for workshop charts - bar chart showing zone analysis over time
-    // Sort data by workshop departure time for proper progression
-    const sortedData = data.sort((a, b) => {
-      const timeA = a['Workshop Departure Time'] || '';
-      const timeB = b['Workshop Departure Time'] || '';
-      return timeA.localeCompare(timeB);
-    });
-
-    const workshopTimeLabels = [];
-    const zoneValues = [];
+    // Special handling for workshop charts - bar chart showing vehicle count by Ward
+    const groupedData = {};
     const vehicleDetails = {};
 
-    sortedData.forEach((item, index) => {
-      const workshopTime = item['Workshop Departure Time'] || `Record ${index + 1}`;
-      const zone = item.Zone || 'Unknown';
+    data.forEach((row) => {
+      const ward = row.Ward || 'Unknown';
+      const count = row.Count || 0;
 
-      // Filter out negative zones
-      const zoneNumber = Number(zone);
-      if (!isNaN(zoneNumber) && zoneNumber <= 0) {
-        return; // Skip negative zones
+      // Skip empty wards
+      if (!ward || ward === 'Unknown') return;
+
+      // Group by ward and sum the counts
+      if (!groupedData[ward]) {
+        groupedData[ward] = 0;
+        vehicleDetails[ward] = [];
       }
 
-      workshopTimeLabels.push(workshopTime);
-      zoneValues.push(Number(zone));
+      groupedData[ward] += count;
 
-      // Store vehicle details for each time point
-      vehicleDetails[workshopTime] = [{
-        ward: item.Ward,
-        permanentVehicleNumber: item['Permanent Vehicle Number'],
-        spareVehicleNumber: item['Spare Vehicle Number'],
-        workshopDepartureTime: item['Workshop Departure Time'],
-        zone: item.Zone,
-        date: item.Date
-      }];
+      // Store vehicle details for this ward
+      if (row.VehicleDetails && Array.isArray(row.VehicleDetails)) {
+        vehicleDetails[ward] = vehicleDetails[ward].concat(row.VehicleDetails);
+      } else {
+        // Fallback for individual row data
+        vehicleDetails[ward].push({
+          ward: row.Ward,
+          zone: row.Zone || 'Unknown',
+          permanentVehicleNumber: row['Permanent Vehicle Number'] || '',
+          spareVehicleNumber: row['Spare Vehicle Number'] || '',
+          workshopDepartureTime: row['Workshop Departure Time'] || '',
+          date: row.Date,
+          zones: row.Zones || row.Zone || 'Unknown'
+        });
+      }
     });
 
+    // Sort wards numerically if they are numbers, otherwise alphabetically
+    const labels = Object.keys(groupedData).sort((a, b) => {
+      const numA = Number(a);
+      const numB = Number(b);
+      if (!isNaN(numA) && !isNaN(numB)) {
+        return numA - numB;
+      }
+      return a.localeCompare(b);
+    });
+
+    const values = labels.map(label => groupedData[label]);
     const colors = getChartColors(sheetName);
 
     return {
-      labels: workshopTimeLabels,
+      labels,
       datasets: [{
         label: getDatasetLabel(sheetName),
-        data: zoneValues,
+        data: values,
         ...colors,
         borderWidth: 2,
         borderRadius: 4,
@@ -556,8 +567,8 @@ const getAxisLabels = (sheetName) => {
   // Special case for workshop charts
   if (sheetName === 'sphereWorkshopExit') {
     return {
-      xLabel: 'Workshop Departure Time',
-      yLabel: 'Zones'
+      xLabel: 'Ward Number',
+      yLabel: 'Number of Vehicles'
     };
   }
 
@@ -613,7 +624,7 @@ export const getChartConfig = (title, sheetName) => {
         callbacks: {
           title: function(context) {
             if (isWorkshopChart) {
-              return `Workshop Time: ${context[0].label}`;
+              return `Ward: ${context[0].label}`;
             }
             return `Zone ${context[0].label}`;
           },
@@ -625,25 +636,24 @@ export const getChartConfig = (title, sheetName) => {
               return `${datasetLabel}: ${value.toFixed(1)}%`;
             }
             if (isWorkshopChart) {
-              const workshopTime = context.label;
+              const ward = context.label;
               const dataset = context.dataset;
 
-              // Get vehicle details for this workshop time
-              if (dataset.vehicleDetails && dataset.vehicleDetails[workshopTime]) {
-                const vehicleDetail = dataset.vehicleDetails[workshopTime][0];
-                const lines = [];
+              // Get vehicle details for this ward
+              if (dataset.vehicleDetails && dataset.vehicleDetails[ward]) {
+                const vehicleDetails = dataset.vehicleDetails[ward];
+                const lines = [`Vehicles: ${value}`];
 
-                if (vehicleDetail.permanentVehicleNumber) {
-                  lines.push(`Permanent Vehicle: ${vehicleDetail.permanentVehicleNumber}`);
-                }
-                if (vehicleDetail.spareVehicleNumber) {
-                  lines.push(`Spare Vehicle: ${vehicleDetail.spareVehicleNumber}`);
+                // Show zones covered by this ward
+                const zones = [...new Set(vehicleDetails.map(detail => detail.zone || detail.zones).filter(Boolean))];
+                if (zones.length > 0) {
+                  lines.push(`Zones: ${zones.join(', ')}`);
                 }
 
-                return lines.length > 0 ? lines : [`Zone: ${value}`];
+                return lines;
               }
 
-              return [`Zone: ${value}`];
+              return [`Vehicles: ${value}`];
             }
             return `${datasetLabel}: ${value}`;
           },
