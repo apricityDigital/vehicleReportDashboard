@@ -322,6 +322,31 @@ const Dashboard = () => {
           </div>
         )}
       </div>
+
+      {/* Copyright Footer */}
+      <footer className="copyright-footer mt-8 sm:mt-12 lg:mt-16 py-6 sm:py-8 border-t border-gray-200">
+        <div className="container mx-auto px-2 sm:px-4 lg:px-6">
+          <div className="text-center">
+            <div className="copyright-badge inline-flex items-center justify-center space-x-2 px-4 py-2">
+              <div className="copyright-icon w-6 h-6 rounded-full flex items-center justify-center">
+                <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                </svg>
+              </div>
+              <span className="text-sm sm:text-base font-medium text-gray-700">
+                © {new Date().getFullYear()}
+                <span className="copyright-text mx-2">
+                  Apricity Digital Private Limited
+                </span>
+              </span>
+              <div className="w-1 h-1 bg-blue-400 rounded-full animate-pulse"></div>
+            </div>
+            <p className="copyright-tagline mt-3 text-xs sm:text-sm text-gray-500 max-w-md mx-auto">
+              Powering digital transformation with innovative solutions
+            </p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };
