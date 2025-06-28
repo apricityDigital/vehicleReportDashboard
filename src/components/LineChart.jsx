@@ -175,27 +175,29 @@ const LineChart = ({ data, options, title, loading = false, error = null, sheetN
         </div>
       </div>
 
-      {/* Enhanced Detail Modal */}
+      {/* Enhanced Detail Modal - Mobile Responsive */}
       {selectedDetails && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-            <div className="flex justify-between items-center p-6 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-indigo-50">
-              <div>
-                <h3 className="text-xl font-bold text-gray-900 flex items-center">
-                  <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-lg mr-3 flex items-center justify-center">
-                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white rounded-lg sm:rounded-xl shadow-2xl max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-3 sm:p-6 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-indigo-50">
+              <div className="flex-1 min-w-0">
+                <h3 className="text-lg sm:text-xl font-bold text-gray-900 flex items-center">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-lg mr-2 sm:mr-3 flex items-center justify-center">
+                    <svg className="w-3 h-3 sm:w-4 sm:h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                     </svg>
                   </div>
-                  Workshop Time: {selectedDetails.workshopTime} - Zone {selectedDetails.zone}
+                  <span className="truncate">
+                    Workshop Time: {selectedDetails.workshopTime} - Zone {selectedDetails.zone}
+                  </span>
                 </h3>
-                <p className="text-sm text-purple-600 mt-1">Vehicle departure details</p>
+                <p className="text-xs sm:text-sm text-purple-600 mt-1">Vehicle departure details</p>
               </div>
               <button
                 onClick={() => setSelectedDetails(null)}
-                className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-2 rounded-lg transition-colors"
+                className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-2 rounded-lg transition-colors touch-manipulation mt-2 sm:mt-0"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>

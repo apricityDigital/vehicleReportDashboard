@@ -266,7 +266,7 @@ const Dashboard = () => {
         error={error}
       />
 
-      <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8">
+      <div className="container mx-auto px-2 sm:px-4 lg:px-6 py-3 sm:py-4 lg:py-6 max-w-full overflow-x-hidden">
         {/* Filters */}
         <Filters
           selectedDate={selectedDate}
@@ -300,10 +300,10 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* Enhanced Charts Grid - Mobile Responsive */}
-        <div className="mobile-dashboard-grid md:grid md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 md:gap-6 lg:gap-8 auto-rows-fr">
+        {/* Enhanced Charts Grid - Mobile-First Responsive */}
+        <div className="charts-grid grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 auto-rows-fr">
           {Object.keys(CHART_TITLES).map(sheetName => (
-            <div key={sheetName} className="flex">
+            <div key={sheetName} className="chart-container">
               {sheetName === 'lessThan3Trips' ? (
                 renderLessThan3TripsNavigationCard(sheetName)
               ) : (

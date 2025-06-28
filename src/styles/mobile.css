@@ -1,0 +1,380 @@
+/* Mobile-First Responsive Styles for Vehicle Report Dashboard */
+
+/* Touch-friendly interactions */
+.touch-manipulation {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Mobile-optimized chart containers */
+.mobile-chart-wrapper {
+  position: relative;
+  width: 100%;
+  height: 300px;
+  min-height: 250px;
+}
+
+@media (min-width: 640px) {
+  .mobile-chart-wrapper {
+    height: 350px;
+    min-height: 300px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .mobile-chart-wrapper {
+    height: 400px;
+    min-height: 350px;
+  }
+}
+
+/* Chart area responsive sizing */
+.chart-area {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.chart-area canvas {
+  max-width: 100% !important;
+  height: auto !important;
+}
+
+/* Mobile-friendly card layouts */
+.uniform-chart-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  width: 100%;
+  min-height: 400px;
+}
+
+@media (min-width: 640px) {
+  .uniform-chart-card {
+    border-radius: 16px;
+    min-height: 450px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .uniform-chart-card {
+    min-height: 500px;
+  }
+}
+
+/* Card header responsive styling */
+.card-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+@media (min-width: 640px) {
+  .card-header {
+    padding: 16px 20px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .card-header {
+    padding: 20px 24px;
+  }
+}
+
+/* Card icon responsive sizing */
+.card-icon {
+  width: 24px;
+  height: 24px;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+@media (min-width: 640px) {
+  .card-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    margin-right: 12px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .card-icon {
+    width: 32px;
+    height: 32px;
+    margin-right: 16px;
+  }
+}
+
+/* Card title responsive typography */
+.card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+  line-height: 1.4;
+  margin: 0;
+}
+
+@media (min-width: 640px) {
+  .card-title {
+    font-size: 16px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .card-title {
+    font-size: 18px;
+  }
+}
+
+/* Mobile title truncation */
+.mobile-title-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+}
+
+@media (min-width: 640px) {
+  .mobile-title-truncate {
+    max-width: 300px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .mobile-title-truncate {
+    max-width: none;
+    white-space: normal;
+  }
+}
+
+/* Chart status indicators */
+.chart-status-indicator {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.chart-status-indicator.success {
+  background-color: #10b981;
+}
+
+.chart-status-indicator.warning {
+  background-color: #f59e0b;
+}
+
+.chart-status-indicator.error {
+  background-color: #ef4444;
+}
+
+/* Click instruction overlay */
+.click-instruction {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  opacity: 0.8;
+  transition: opacity 0.3s ease;
+}
+
+@media (min-width: 640px) {
+  .click-instruction {
+    bottom: 12px;
+    right: 12px;
+    padding: 6px 10px;
+    font-size: 11px;
+    border-radius: 8px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .click-instruction {
+    bottom: 16px;
+    right: 16px;
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+}
+
+.click-instruction:hover {
+  opacity: 1;
+}
+
+/* Mobile navigation overlay */
+.mobile-nav-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 40;
+  backdrop-filter: blur(4px);
+}
+
+/* Mobile navigation menu */
+.mobile-nav-menu {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 280px;
+  max-width: 85vw;
+  background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.3s ease-in-out;
+  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.3);
+}
+
+.mobile-nav-menu.open {
+  transform: translateX(0);
+}
+
+.mobile-nav-menu.closed {
+  transform: translateX(100%);
+}
+
+/* Mobile navigation items */
+.mobile-nav-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 16px 24px;
+  color: white;
+  text-decoration: none;
+  transition: background-color 0.2s ease;
+  border: none;
+  background: none;
+  font-size: 16px;
+  text-align: left;
+}
+
+.mobile-nav-item:hover,
+.mobile-nav-item:focus {
+  background-color: rgba(255, 255, 255, 0.1);
+  outline: none;
+}
+
+.mobile-nav-item:active {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Mobile scroll styling */
+.mobile-scroll {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+.mobile-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.mobile-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.mobile-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+}
+
+/* Mobile-specific utilities */
+.mobile-hidden {
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .mobile-hidden {
+    display: block;
+  }
+}
+
+.mobile-only {
+  display: block;
+}
+
+@media (min-width: 640px) {
+  .mobile-only {
+    display: none;
+  }
+}
+
+/* Responsive text utilities */
+.responsive-text-xs {
+  font-size: 10px;
+}
+
+@media (min-width: 640px) {
+  .responsive-text-xs {
+    font-size: 12px;
+  }
+}
+
+.responsive-text-sm {
+  font-size: 12px;
+}
+
+@media (min-width: 640px) {
+  .responsive-text-sm {
+    font-size: 14px;
+  }
+}
+
+.responsive-text-base {
+  font-size: 14px;
+}
+
+@media (min-width: 640px) {
+  .responsive-text-base {
+    font-size: 16px;
+  }
+}
+
+.responsive-text-lg {
+  font-size: 16px;
+}
+
+@media (min-width: 640px) {
+  .responsive-text-lg {
+    font-size: 18px;
+  }
+}
+
+.responsive-text-xl {
+  font-size: 18px;
+}
+
+@media (min-width: 640px) {
+  .responsive-text-xl {
+    font-size: 20px;
+  }
+}
+
+.responsive-text-2xl {
+  font-size: 20px;
+}
+
+@media (min-width: 640px) {
+  .responsive-text-2xl {
+    font-size: 24px;
+  }
+}
