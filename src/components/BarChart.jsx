@@ -156,7 +156,6 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
         } else if (sheetName === 'fuelStation' || sheetName === 'issuesPost0710' || sheetName === 'post06AMOpenIssues') {
           // Extract timing details from the zone data
           let timingDetails = null;
-
           // Look for Details array in the zone data (this should be available from the new transformFuelStationData function)
           const zoneWithDetails = zoneData.find(row => row.Details && Array.isArray(row.Details) && row.Details.length > 0);
           if (zoneWithDetails) {
@@ -243,7 +242,7 @@ const BarChart = ({ data, options, title, loading = false, error = null, sheetNa
           ...options?.plugins?.tooltip?.callbacks,
           title: (context) => {
             if (sheetName === 'sphereWorkshopExit') {
-              return `Zone ${context[0].label}`;
+              return `Ward ${context[0].label}`;
             }
             return `Zone ${context[0].label}`;
           },
